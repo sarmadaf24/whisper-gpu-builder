@@ -1,0 +1,57 @@
+name: Build Whisper with GPU and Process Audio
+
+on:
+  workflow_dispatch:
+    inputs:
+      model_size:
+        description: 'Model (tiny/base/small/medium/large-v3-turbo)'
+        required: true
+        default: 'base'
+      audio_file_url:
+        description: 'Direct URL to your audio file (or use repo default)'
+        required: false
+        default: ''
+
+jobs:
+  build-and-run:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Visual Studio
+      uses: ilammy/msvc-dev-cmd@v1
+
+    - name: Install CUDA
+      run: |
+        # Download CUDA 12.4 toolkit
+        curl -L -o cuda.exe https://developer.download.nvidia.com/compute/cuda/12.4.1/local_installers/cuda_12.4.1_551.78_windows.exe
+        ./cuda.exe -s
+
+    - name: Clone whisper.cpp
+      run: git clone https://github.com/ggerganov/whisper.cpp.git
+
+    - name: Build with CUDA
+      run: |
+        cd whisper.cpp
+        mkdir build
+        cd build
+        cmake .. -DGGML_CUDA=1 -DCMAKE_CUDA_ARCHITECTURES="86"
+        cmake --build . --config Release --parallel
+
+    - name: Download model
+      run: |
+        cd whisper.cpp\models
+        .\download-ggml-model.cmd ${{ github.event.inputs.model_size }}
+
+    - name: Process audio
+      run: |
+        cd whisper.cpp\build\bin\Release
+        .\whisper-cli.exe -m ..\..\..\models\ggml-${{ github.event.inputs.model_size }}.bin -f ${{ github.event.inputs.audio_file_url || 'sample.wav' }} -l ar -otxt -oj -of result.json
+
+    - name: Upload results
+      uses: actions/upload-artifact@v4
+      with:
+        name: whisper-results
+        path: whisper.cpp\build\bin\Release\*.json
