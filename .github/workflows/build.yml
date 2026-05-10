@@ -1,37 +1,32 @@
-name: Download MASAQ Dataset (Mendeley)
+name: دانلود کامل QURAN-NLP (کل مخزن)
 
 on:
-  workflow_dispatch:
+  workflow_dispatch:  # با کلیک دستی اجرا می‌شود
 
 jobs:
-  download:
+  download-full-repo:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
+      - name: مخزن مقصد را آماده کن (برای ذخیره فایل‌ها)
         uses: actions/checkout@v4
 
-      - name: Download MASAQ using wget
+      - name: کل مخزن QURAN-NLP را clone کن (حدود 1.7 گیگابایت)
         run: |
-          # لینک مستقیم دانلود که از صفحه Mendeley استخراج شده
-          wget --header="Accept: application/zip" \
-               --user-agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" \
-               -O MASAQ.zip \
-               "https://prod-datasets-files.s3.amazonaws.com/9yvrzxktmr/4/93bc5847-4e7b-437d-aa50-b1a1a750722d.zip?AWSAccessKeyId=AKIAQTVIV4HZ3PQSM7MO&Expires=1768178945&Signature=2P7rghJN31YZpMtJ9kAUDxY8vMs%3D&response-content-disposition=inline%3B%20filename%3D%22MASAQ%3A%20Morphologically-Analyzed%20and%20Syntactically-Annotated%20Quran%20Dataset.zip%22&response-content-type=application%2Fzip"
+          echo "در حال clone کردن مخزن اصلی (حدود 1.7 گیگ)..."
+          git clone --depth 1 https://github.com/islamAndAi/QURAN-NLP.git
+          echo "clone کامل شد!"
 
-      - name: Verify and extract
+      - name: حجم فایل‌های دانلود شده را نمایش بده
         run: |
-          if file MASAQ.zip | grep -q 'Zip archive'; then
-            echo "فایل ZIP معتبر است، در حال اکسترکت..."
-            unzip MASAQ.zip -d masaq-data/
-            ls -la masaq-data/
-          else
-            echo "خطا: فایل دانلود شده ZIP نیست. خروجی wget را بررسی کنید."
-            cat MASAQ.zip
-            exit 1
-          fi
+          echo "حجم کل فایل‌های دانلود شده:"
+          du -sh QURAN-NLP/
+          echo ""
+          echo "بزرگ‌ترین فایل‌ها:"
+          find QURAN-NLP/ -type f -exec du -h {} + | sort -rh | head -20
 
-      - name: Upload as artifact
+      - name: خروجی را به عنوان Artifact ذخیره کن (برای دانلود نهایی)
         uses: actions/upload-artifact@v4
         with:
-          name: MASAQ-Dataset
-          path: masaq-data/
+          name: QURAN-NLP-Complete
+          path: QURAN-NLP/
+          retention-days: 7  # ۷ روز در GitHub نگهداری می‌شود
