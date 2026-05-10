@@ -1,32 +1,49 @@
-name: دانلود کامل QURAN-NLP (کل مخزن)
+name: دانلود دیتاست کامل از کاگل (حل مشکل حجم)
 
 on:
-  workflow_dispatch:  # با کلیک دستی اجرا می‌شود
+  workflow_dispatch:
 
 jobs:
-  download-full-repo:
+  download-full-dataset:
     runs-on: ubuntu-latest
     steps:
-      - name: مخزن مقصد را آماده کن (برای ذخیره فایل‌ها)
+      - name: مخزن مقصد رو آماده کن
         uses: actions/checkout@v4
 
-      - name: کل مخزن QURAN-NLP را clone کن (حدود 1.7 گیگابایت)
+      - name: نصب پایتون و کتابخانه مخصوص کاگل
         run: |
-          echo "در حال clone کردن مخزن اصلی (حدود 1.7 گیگ)..."
-          git clone --depth 1 https://github.com/islamAndAi/QURAN-NLP.git
-          echo "clone کامل شد!"
+          python -m pip install --upgrade pip
+          pip install kagglehub pandas
 
-      - name: حجم فایل‌های دانلود شده را نمایش بده
+      - name: دانلود خودکار کل دیتاست (1.71 گیگ) از کاگل
         run: |
-          echo "حجم کل فایل‌های دانلود شده:"
-          du -sh QURAN-NLP/
-          echo ""
-          echo "بزرگ‌ترین فایل‌ها:"
-          find QURAN-NLP/ -type f -exec du -h {} + | sort -rh | head -20
+          python - <<EOF
+          import kagglehub
+          import os
+          import shutil
+          
+          print("⏳ در حال دانلود 1.71 گیگابایت از کاگل... (حدود 5-10 دقیقه)")
+          # این دستور می رود و کل دیتاست را می آورد
+          path = kagglehub.dataset_download("zamanayaz2020/quran-nlp")
+          
+          print(f"✅ دانلود کامل شد! فایل‌ها در این آدرس هستند: {path}")
+          
+          # تمام فایل‌ها را به ریشه پروژه کپی می‌کنیم تا بعد آپلود شوند
+          for item in os.listdir(path):
+              s = os.path.join(path, item)
+              d = os.path.join(os.getcwd(), "quran-nlp-full", item)
+              if os.path.isdir(s):
+                  shutil.copytree(s, d, dirs_exist_ok=True)
+              else:
+                  shutil.copy2(s, d)
+          EOF
 
-      - name: خروجی را به عنوان Artifact ذخیره کن (برای دانلود نهایی)
+      - name: بررسی حجم فایل دانلود شده (برای اطمینان)
+        run: du -sh quran-nlp-full/
+
+      - name: آپلود نهایی به عنوان Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: QURAN-NLP-Complete
-          path: QURAN-NLP/
-          retention-days: 7  # ۷ روز در GitHub نگهداری می‌شود
+          name: QURAN-NLP-Complete-Full
+          path: quran-nlp-full/
+          retention-days: 7
