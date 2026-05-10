@@ -1,49 +1,58 @@
-name: دانلود دیتاست کامل از کاگل (حل مشکل حجم)
+name: دانلود کامل دیتاست QURAN-NLP (حل مشکل Cache)
 
 on:
   workflow_dispatch:
 
 jobs:
-  download-full-dataset:
+  download-complete-dataset:
     runs-on: ubuntu-latest
     steps:
-      - name: مخزن مقصد رو آماده کن
+      - name: آماده‌سازی مخزن
         uses: actions/checkout@v4
 
-      - name: نصب پایتون و کتابخانه مخصوص کاگل
-        run: |
-          python -m pip install --upgrade pip
-          pip install kagglehub pandas
+      - name: نصب KaggleHub
+        run: pip install kagglehub
 
-      - name: دانلود خودکار کل دیتاست (1.71 گیگ) از کاگل
+      - name: دانلود کل دیتاست از کاگل و کپی به پوشه فعلی
         run: |
           python - <<EOF
           import kagglehub
           import os
           import shutil
+
+          print("⏳ در حال دانلود 1.71 گیگابایت از کاگل... (صبور باشید)")
+          # این تابع کل دیتاست را در Cache دانلود می‌کند
+          cached_path = kagglehub.dataset_download("zamanayaz2020/quran-nlp")
           
-          print("⏳ در حال دانلود 1.71 گیگابایت از کاگل... (حدود 5-10 دقیقه)")
-          # این دستور می رود و کل دیتاست را می آورد
-          path = kagglehub.dataset_download("zamanayaz2020/quran-nlp")
+          print(f"✅ دیتاست در Cache دانلود شد: {cached_path}")
+
+          # هدف: انتقال کل محتویات از Cache به پوشه‌ای درون Actions
+          current_dir = os.getcwd()
+          target_path = os.path.join(current_dir, "quran-nlp-complete")
+
+          # اگر پوشه هدف از قبل وجود داشت، پاکش کن
+          if os.path.exists(target_path):
+              shutil.rmtree(target_path)
+
+          # **نکته طلایی:** کل محتویات را از Cache به پوشه کاری منتقل کن
+          print(f"📁 در حال انتقال فایل‌ها از Cache به {target_path}")
+          shutil.move(cached_path, target_path)
           
-          print(f"✅ دانلود کامل شد! فایل‌ها در این آدرس هستند: {path}")
+          print("✅ انتقال با موفقیت انجام شد.")
           
-          # تمام فایل‌ها را به ریشه پروژه کپی می‌کنیم تا بعد آپلود شوند
-          for item in os.listdir(path):
-              s = os.path.join(path, item)
-              d = os.path.join(os.getcwd(), "quran-nlp-full", item)
-              if os.path.isdir(s):
-                  shutil.copytree(s, d, dirs_exist_ok=True)
-              else:
-                  shutil.copy2(s, d)
+          # بررسی حجم نهایی برای اطمینان
+          total_size = 0
+          for dirpath, dirnames, filenames in os.walk(target_path):
+              for f in filenames:
+                  fp = os.path.join(dirpath, f)
+                  total_size += os.path.getsize(fp)
+          
+          print(f"📊 حجم کل فایل‌های منتقل شده: {total_size / (1024**3):.2f} گیگابایت")
           EOF
 
-      - name: بررسی حجم فایل دانلود شده (برای اطمینان)
-        run: du -sh quran-nlp-full/
-
-      - name: آپلود نهایی به عنوان Artifact
+      - name: آپلود همه چیز به عنوان Artifact نهایی
         uses: actions/upload-artifact@v4
         with:
-          name: QURAN-NLP-Complete-Full
-          path: quran-nlp-full/
+          name: QURAN-NLP-Complete-Full-1.7GB
+          path: quran-nlp-complete/
           retention-days: 7
