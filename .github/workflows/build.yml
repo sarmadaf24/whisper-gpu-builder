@@ -1,4 +1,4 @@
-name: Download MASAQ - با لینک واقعی
+name: Download MASAQ by ID
 
 on:
   workflow_dispatch:
@@ -10,21 +10,28 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Download MASAQ
-        run: |
-          # لینک واقعی را که از مرورگر کپی کرده‌اید، اینجا جایگزین کنید
-          # کل لینک باید بین " " باشد
-          REAL_URL="https://prod-datasets-files.s3.amazonaws.com/9yvrzxktmr/4/93bc5847-4e7b-437d-aa50-b1a1a750722d.zip?AWSAccessKeyId=AKIAQTVIV4HZ3PQSM7MO&Expires=1768178945&Signature=2P7rghJN31YZpMtJ9kAUDxY8vMs%3D&response-content-disposition=inline%3B%20filename%3D%22MASAQ%3A%20Morphologically-Analyzed%20and%20Syntactically-Annotated%20Quran%20Dataset.zip%22&response-content-type=application%2Fzip"
-          
-          echo "⏳ در حال دانلود از لینک..."
-          wget -O MASAQ.zip "$REAL_URL"
-          
-          echo "✅ دانلود کامل شد. در حال اکسترکت..."
-          unzip MASAQ.zip -d masaq-data/
-          ls -la masaq-data/
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
 
-      - name: Upload as artifact
+      - name: Install datahugger
+        run: |
+          pip install datahugger
+
+      - name: Download dataset using DOI
+        run: |
+          python -c "
+          from datahugger import download
+          # آموزش: شناسه DOI دیتاست مورد نظرتان را اینجا قرار دهید
+          # می‌توانید آن را از صفحه دیتاست در Mendeley کپی کنید
+          # مثال: '10.17632/9yvrzxktmr.4'
+          doi = '10.17632/9yvrzxktmr.4'  # <-- شناسه دیتاست MASAQ
+          download(doi, 'downloaded_dataset')
+          "
+
+      - name: Upload dataset as artifact
         uses: actions/upload-artifact@v4
         with:
           name: MASAQ-Dataset
-          path: masaq-data/
+          path: downloaded_dataset/
