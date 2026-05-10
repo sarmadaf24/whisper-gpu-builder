@@ -1,4 +1,4 @@
-name: Download MASAQ by ID
+name: Download MASAQ - Datahugger
 
 on:
   workflow_dispatch:
@@ -22,16 +22,21 @@ jobs:
       - name: Download dataset using DOI
         run: |
           python -c "
-          from datahugger import download
-          # آموزش: شناسه DOI دیتاست مورد نظرتان را اینجا قرار دهید
-          # می‌توانید آن را از صفحه دیتاست در Mendeley کپی کنید
-          # مثال: '10.17632/9yvrzxktmr.4'
-          doi = '10.17632/9yvrzxktmr.4'  # <-- شناسه دیتاست MASAQ
-          download(doi, 'downloaded_dataset')
+          import datahugger
+          # شناسه DOI دیتاست MASAQ
+          doi = '10.17632/9yvrzxktmr.4'
+          # دانلود به پوشه 'masaq-data'
+          datahugger.get(doi, 'masaq-data')
+          print('✅ دانلود کامل شد!')
           "
 
-      - name: Upload dataset as artifact
+      - name: List downloaded files
+        run: |
+          echo "📁 محتویات پوشه دانلود شده:"
+          ls -la masaq-data/
+
+      - name: Upload as artifact
         uses: actions/upload-artifact@v4
         with:
           name: MASAQ-Dataset
-          path: downloaded_dataset/
+          path: masaq-data/
