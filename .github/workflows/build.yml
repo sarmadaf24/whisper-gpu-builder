@@ -1,7 +1,7 @@
-name: Download QURAN-NLP Dataset
+name: Download MASAQ Dataset (Mendeley)
 
 on:
-  workflow_dispatch:  # یعنی با یک کلیک دستی در GitHub اجرا می‌شود
+  workflow_dispatch:
 
 jobs:
   download:
@@ -10,23 +10,28 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install Kaggle CLI
-        run: pip install kaggle
-
-      - name: Download QURAN-NLP from Kaggle
-        env:
-          KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
-          KAGGLE_KEY: ${{ secrets.KAGGLE_KEY }}
-        run: kaggle datasets download -d zamanayaz2020/quran-nlp
-
-      - name: Unzip and organize files
+      - name: Download MASAQ using wget
         run: |
-          unzip quran-nlp.zip -d quran-nlp-data/
-          rm quran-nlp.zip
-          ls -la quran-nlp-data/
+          # لینک مستقیم دانلود که از صفحه Mendeley استخراج شده
+          wget --header="Accept: application/zip" \
+               --user-agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" \
+               -O MASAQ.zip \
+               "https://prod-datasets-files.s3.amazonaws.com/9yvrzxktmr/4/93bc5847-4e7b-437d-aa50-b1a1a750722d.zip?AWSAccessKeyId=AKIAQTVIV4HZ3PQSM7MO&Expires=1768178945&Signature=2P7rghJN31YZpMtJ9kAUDxY8vMs%3D&response-content-disposition=inline%3B%20filename%3D%22MASAQ%3A%20Morphologically-Analyzed%20and%20Syntactically-Annotated%20Quran%20Dataset.zip%22&response-content-type=application%2Fzip"
 
-      - name: Upload as artifact (for download)
+      - name: Verify and extract
+        run: |
+          if file MASAQ.zip | grep -q 'Zip archive'; then
+            echo "فایل ZIP معتبر است، در حال اکسترکت..."
+            unzip MASAQ.zip -d masaq-data/
+            ls -la masaq-data/
+          else
+            echo "خطا: فایل دانلود شده ZIP نیست. خروجی wget را بررسی کنید."
+            cat MASAQ.zip
+            exit 1
+          fi
+
+      - name: Upload as artifact
         uses: actions/upload-artifact@v4
         with:
-          name: QURAN-NLP-CSV
-          path: quran-nlp-data/
+          name: MASAQ-Dataset
+          path: masaq-data/
