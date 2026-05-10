@@ -1,4 +1,4 @@
-name: Download MASAQ - Using Official Mendeley API
+name: Download MASAQ - Simple Direct Download
 
 on:
   workflow_dispatch:
@@ -10,53 +10,17 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Download MASAQ dataset via Mendeley API
+      - name: Download MASAQ with valid link
         run: |
-          # مرحله 1: دریافت متادیتا از API رسمی Mendeley
-          echo "⏳ دریافت اطلاعات دیتاست از API Mendeley..."
+          # ⚠️ لینک زیر را با لینکی که از مرورگر کپی کردید جایگزین کنید
+          VALID_URL="https://prod-datasets-files.s3.amazonaws.com/9yvrzxktmr/4/[لینک جدید شما]"
           
-          # برای MASAQ نسخه جدید (9yvrzxktmr/4)
-          METADATA=$(curl -s "https://api.elsevier.com/content/dataset/mendeley/9yvrzxktmr/4")
+          echo "⏳ دانلود از لینک جدید..."
+          wget -O MASAQ.zip "$VALID_URL"
           
-          # روش جایگزین: استفاده از لینک مستقیم DOI
-          curl -s "https://data.mendeley.com/api/datasets/9yvrzxktmr/4" -o dataset_info.json
-          
-          echo "✅ متادیتا دریافت شد. در حال جستجوی لینک دانلود..."
-          
-          # استخراج لینک دانلود از فایل JSON
-          DOWNLOAD_URL=$(grep -oP 'https://prod-datasets-files\.s3\.amazonaws\.com/[^\s"<>]+\.zip[^\s"<>]*' dataset_info.json | head -1)
-          
-          if [ -z "$DOWNLOAD_URL" ]; then
-              echo "❌ لینک در JSON پیدا نشد. لطفاً خودتان لینک را از مرورگر بگیرید."
-              echo "مراحل:"
-              echo "1. به https://data.mendeley.com/datasets/9yvrzxktmr/4 بروید"
-              echo "2. راست کلیک روی Download All و Copy link address"
-              echo "3. لینک را در کد زیر قرار دهید"
-              exit 1
-          fi
-          
-          echo "✅ لینک پیدا شد: ${DOWNLOAD_URL:0:150}..."
-          
-          # مرحله 2: دانلود فایل
-          echo "⏳ در حال دانلود فایل (16.1 مگابایت)..."
-          wget --progress=bar:force \
-               --user-agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" \
-               -O MASAQ.zip \
-               "$DOWNLOAD_URL"
-          
-          # مرحله 3: بررسی فایل دانلود شده
-          if file MASAQ.zip | grep -q 'Zip archive'; then
-            echo "✅ فایل ZIP معتبر است، در حال اکسترکت..."
-            unzip MASAQ.zip -d masaq-data/
-            echo "📁 محتویات پوشه:"
-            ls -la masaq-data/
-          else
-            echo "❌ خطا: فایل دانلود شده ZIP معتبر نیست."
-            echo "خروجی فایل:"
-            file MASAQ.zip
-            cat MASAQ.zip
-            exit 1
-          fi
+          echo "✅ دانلود کامل شد. بررسی فایل..."
+          unzip -l MASAQ.zip | head -20
+          unzip MASAQ.zip -d masaq-data/
 
       - name: Upload as artifact
         uses: actions/upload-artifact@v4
