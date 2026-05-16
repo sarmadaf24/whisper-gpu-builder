@@ -1,4 +1,4 @@
-name: Build Author JSON - Dhahabi Complete
+name: Build Author JSON - Dhahabi Exact
 
 on:
   workflow_dispatch:
@@ -22,265 +22,270 @@ jobs:
           python -m pip install --upgrade pip
           pip install pyyaml
       
-      - name: 🔍 جستجوی جامع با الگوهای فارسی و عربی
+      - name: 🔍 دانلود و بررسی ساختار پوشه ذهبی
         shell: python
         run: |
           import os
           import subprocess
-          import json
           
-          # الگوهای جستجو به فارسی، عربی و انگلیسی
-          SEARCH_PATTERNS = [
-              "dhahabi",
-              "Dhahabi",
-              "ذَهَبي",  
-              "ذهبي",
-              "الذهبي",
-              "الذَهَبي",
-              "ShamsDin",
-              "شمس الدين",
-              "شمسالدين"
-          ]
+          repo_url = "https://github.com/OpenITI/0750AH.git"
+          target_dir = "openiti_repo"
           
-          DEATH_YEAR = 748
+          print("📥 کلون کردن مخزن 0750AH...")
+          if not os.path.exists(target_dir):
+              subprocess.run(["git", "clone", "--depth", "1", repo_url, target_dir], check=True)
           
-          # مخازن بیشتری رو بررسی می‌کنیم
-          possible_repos = [
-              "0650AH", "0675AH", "0700AH", "0725AH", 
-              "0750AH", "0775AH", "0800AH", "0825AH"
-          ]
+          dhahabi_path = os.path.join(target_dir, "data", "0748Dhahabi")
           
-          found_folders = {}
+          if not os.path.exists(dhahabi_path):
+              print("❌ پوشه 0748Dhahabi یافت نشد!")
+              exit(1)
           
-          for repo_name in possible_repos:
-              repo_url = f"https://github.com/OpenITI/{repo_name}.git"
-              target_dir = f"repo_{repo_name}"
+          print("\n📁 محتوای پوشه 0748Dhahabi:")
+          print("=" * 60)
+          
+          # نمایش ساختار درختی پوشه
+          for root, dirs, files in os.walk(dhahabi_path):
+              level = root.replace(dhahabi_path, '').count(os.sep)
+              indent = ' ' * 2 * level
+              print(f'{indent}{os.path.basename(root)}/')
+              subindent = ' ' * 2 * (level + 1)
               
-              print(f"\n{'='*60}")
-              print(f"🔍 بررسی مخزن {repo_name}...")
-              print(f"{'='*60}")
-              
-              if not os.path.exists(target_dir):
-                  result = subprocess.run(
-                      ["git", "clone", "--depth", "1", "--single-branch", repo_url, target_dir],
-                      capture_output=True,
-                      text=True
-                  )
-                  if result.returncode != 0:
-                      print(f"⚠️ خطا در کلون {repo_name}")
-                      continue
-              
-              data_dir = os.path.join(target_dir, "data")
-              if not os.path.exists(data_dir):
-                  print(f"⚠️ دایرکتوری data یافت نشد")
-                  continue
-              
-              # جستجو با همه الگوها
-              for pattern in SEARCH_PATTERNS:
-                  for folder in sorted(os.listdir(data_dir)):
-                      if pattern.lower() in folder.lower():
-                          if folder not in found_folders:
-                              found_folders[folder] = {
-                                  "repo": repo_name,
-                                  "path": os.path.join(data_dir, folder),
-                                  "matched_pattern": pattern
-                              }
-              
-              # نمایش نتایج این مخزن
-              repo_matches = [f for f, v in found_folders.items() if v['repo'] == repo_name]
-              if repo_matches:
-                  print(f"✅ {len(repo_matches)} پوشه در {repo_name}:")
-                  for m in repo_matches:
-                      print(f"   📁 {m} (الگو: {found_folders[m]['matched_pattern']})")
-              else:
-                  print(f"❌ هیچ پوشه‌ای یافت نشد")
-                  # حذف مخازن بدون نتیجه
-                  subprocess.run(["rm", "-rf", target_dir], check=True)
+              # نمایش فایل‌های مهم
+              for file in sorted(files):
+                  file_path = os.path.join(root, file)
+                  size = os.path.getsize(file_path)
+                  if size > 1024:
+                      print(f'{subindent}📄 {file} ({size:,} bytes)')
+                  else:
+                      print(f'{subindent}📝 {file} ({size} bytes)')
           
-          # ذخیره نتایج
-          with open("search_results.json", "w", encoding="utf-8") as f:
-              json.dump(found_folders, f, ensure_ascii=False, indent=2)
-          
-          print(f"\n{'='*60}")
-          print(f"🎯 جمع‌بندی نهایی: {len(found_folders)} پوشه منحصربه‌فرد")
-          print(f"{'='*60}")
-          
-          for i, (folder, info) in enumerate(sorted(found_folders.items()), 1):
-              print(f"{i}. {folder} [{info['repo']}]")
+          # نمایش محتوای README.md
+          readme_path = os.path.join(dhahabi_path, "README.md")
+          if os.path.exists(readme_path):
+              print("\n" + "=" * 60)
+              print("📋 محتوای README.md:")
+              print("=" * 60)
+              with open(readme_path, 'r', encoding='utf-8') as f:
+                  content = f.read()
+                  print(content[:2000])
+                  if len(content) > 2000:
+                      print("\n... (ادامه دارد)")
       
-      - name: 📚 استخراج و ذخیره‌سازی هر کتاب
+      - name: 📚 استخراج دقیق کتاب‌های ذهبی
         shell: python
         run: |
           import os
           import json
           import yaml
-          import sys
+          import re
           
-          if not os.path.exists("search_results.json"):
-              print("❌ search_results.json یافت نشد!")
-              sys.exit(1)
+          dhahabi_path = "openiti_repo/data/0748Dhahabi"
           
-          with open("search_results.json", "r", encoding="utf-8") as f:
-              found_folders = json.load(f)
+          if not os.path.exists(dhahabi_path):
+              print("❌ پوشه ذهبی یافت نشد!")
+              exit(1)
           
-          if not found_folders:
-              print("❌ هیچ کتابی یافت نشد!")
-              sys.exit(0)
-          
-          def parse_metadata(readme_path):
-              try:
-                  with open(readme_path, 'r', encoding='utf-8') as f:
-                      content = f.read()
-                  if content.startswith('---'):
-                      parts = content.split('---')
-                      if len(parts) >= 3:
+          def parse_yaml_from_readme(content):
+              """استخراج YAML از محتوای README"""
+              if content.startswith('---'):
+                  parts = content.split('---', 2)
+                  if len(parts) >= 3:
+                      try:
                           return yaml.safe_load(parts[1])
-                  return {}
-              except:
-                  return {}
+                      except:
+                          pass
+              return {}
           
-          def extract_text(book_folder):
+          def extract_text_files(folder_path):
+              """استخراج تمام فایل‌های متنی از یک پوشه"""
               texts = []
-              for root, _, files in os.walk(book_folder):
+              text_files = []
+              
+              for root, _, files in os.walk(folder_path):
                   for file in sorted(files):
                       if file == 'README.md':
                           continue
-                      if file.endswith(('.mARkdown', '.txt', '.md')):
-                          try:
-                              with open(os.path.join(root, file), 'r', encoding='utf-8') as f:
-                                  content = f.read()
-                                  if content.strip():
-                                      texts.append(content)
-                          except:
-                              pass
+                      if file.endswith(('.mARkdown', '.txt', '.md', '.yml', '.yaml')):
+                          text_files.append(os.path.join(root, file))
+              
+              for file_path in text_files:
+                  try:
+                      with open(file_path, 'r', encoding='utf-8') as f:
+                          content = f.read()
+                          if content.strip():
+                              # حذف هدرهای OpenITI (خطوطی که با # شروع می‌شوند)
+                              lines = content.split('\n')
+                              clean_lines = []
+                              skip_header = True
+                              for line in lines:
+                                  if skip_header and (line.startswith('#') or line.strip() == ''):
+                                      continue
+                                  skip_header = False
+                                  clean_lines.append(line)
+                              clean_content = '\n'.join(clean_lines).strip()
+                              if clean_content:
+                                  texts.append(clean_content)
+                  except Exception as e:
+                      print(f"⚠️ خطا در خواندن {file_path}: {e}")
+              
               return "\n\n".join(texts)
           
-          # ایجاد پوشه برای خروجی‌ها
-          os.makedirs("output_books", exist_ok=True)
-          os.makedirs("output_metadata", exist_ok=True)
+          print("📚 شروع استخراج کتاب‌های ذهبی...")
+          print("=" * 60)
           
-          all_metadata = []
+          all_books = []
           
-          print(f"\n{'='*60}")
-          print(f"📚 استخراج {len(found_folders)} کتاب...")
-          print(f"{'='*60}\n")
+          # بررسی فایل‌های اصلی در پوشه ذهبی
+          for item in sorted(os.listdir(dhahabi_path)):
+              item_path = os.path.join(dhahabi_path, item)
+              
+              if os.path.isdir(item_path):
+                  # زیرپوشه - احتمالاً یک کتاب جداگانه
+                  print(f"\n📖 بررسی زیرپوشه: {item}")
+                  
+                  readme_path = os.path.join(item_path, "README.md")
+                  metadata = {}
+                  book_title = item
+                  
+                  if os.path.exists(readme_path):
+                      with open(readme_path, 'r', encoding='utf-8') as f:
+                          content = f.read()
+                          metadata = parse_yaml_from_readme(content)
+                          if 'title' in metadata:
+                              book_title = metadata['title']
+                          elif 'Title' in metadata:
+                              book_title = metadata['Title']
+                  
+                  text = extract_text_files(item_path)
+                  
+                  if text:
+                      all_books.append({
+                          "folder": item,
+                          "title": book_title,
+                          "metadata": metadata,
+                          "text_length": len(text),
+                          "text": text
+                      })
+                      print(f"   ✅ {book_title}")
+                      print(f"   📝 {len(text):,} chars")
+                  else:
+                      print(f"   ⚠️ متنی یافت نشد")
+              
+              elif item.endswith(('.mARkdown', '.txt')):
+                  # فایل متنی در سطح اصلی
+                  print(f"\n📄 بررسی فایل: {item}")
+                  
+                  try:
+                      with open(item_path, 'r', encoding='utf-8') as f:
+                          text = f.read()
+                      
+                      # استخراج عنوان از خط اول
+                      lines = text.split('\n')
+                      title = item
+                      if lines and lines[0].startswith('# '):
+                          title = lines[0].replace('# ', '').strip()
+                      elif lines and lines[0].startswith('### '):
+                          title = lines[0].replace('### ', '').strip()
+                      
+                      # حذف هدرهای کامنت
+                      clean_lines = [l for l in lines if not l.startswith('#')]
+                      clean_text = '\n'.join(clean_lines).strip()
+                      
+                      if clean_text:
+                          all_books.append({
+                              "file": item,
+                              "title": title,
+                              "metadata": {},
+                              "text_length": len(clean_text),
+                              "text": clean_text
+                          })
+                          print(f"   ✅ {title}")
+                          print(f"   📝 {len(clean_text):,} chars")
+                  except Exception as e:
+                      print(f"   ⚠️ خطا: {e}")
           
-          for i, (folder_name, info) in enumerate(sorted(found_folders.items()), 1):
-              folder_path = info['path']
+          # ذخیره نتایج
+          os.makedirs("output", exist_ok=True)
+          
+          # ذخیره هر کتاب جداگانه
+          for i, book in enumerate(all_books, 1):
+              safe_name = book['title'].replace('/', '_').replace(' ', '_')[:80]
+              filename = f"output/{i:03d}_{safe_name}.txt"
               
-              print(f"📖 [{i}/{len(found_folders)}] {folder_name}")
-              
-              readme = os.path.join(folder_path, 'README.md')
-              metadata = {}
-              if os.path.exists(readme):
-                  metadata = parse_metadata(readme)
-              
-              title = metadata.get('title') or metadata.get('Title') or folder_name
-              text = extract_text(folder_path)
-              
-              # ذخیره متن کتاب در فایل جداگانه
-              safe_title = title.replace('/', '_').replace(' ', '_')[:100]
-              text_filename = f"output_books/{i:03d}_{safe_title}.txt"
-              
-              with open(text_filename, 'w', encoding='utf-8') as f:
-                  f.write(f"عنوان: {title}\n")
-                  f.write(f"پوشه: {folder_name}\n")
-                  f.write(f"مخزن: {info['repo']}\n")
+              with open(filename, 'w', encoding='utf-8') as f:
+                  f.write(f"عنوان: {book['title']}\n")
                   f.write("=" * 80 + "\n\n")
-                  f.write(text)
+                  f.write(book['text'])
               
-              # ذخیره متادیتا
-              book_meta = {
-                  "index": i,
-                  "folder_name": folder_name,
-                  "title": title,
-                  "repo": info['repo'],
-                  "matched_pattern": info['matched_pattern'],
-                  "metadata": metadata,
-                  "text_length": len(text),
-                  "text_file": text_filename,
-                  "text_preview": text[:500] + "..." if len(text) > 500 else text
-              }
-              
-              all_metadata.append(book_meta)
-              
-              print(f"   ✅ {title}")
-              print(f"   📝 {len(text):,} chars")
-              print(f"   💾 ذخیره در: {text_filename}")
-              print()
+              book['output_file'] = filename
           
-          # ذخیره ایندکس کلی
-          index_data = {
-              "author_name": "شمس الدین ذهبی",
+          # ذخیره ایندکس JSON
+          index = {
+              "author": "شمس الدین محمد بن احمد الذهبي",
               "death_year": 748,
-              "total_books": len(all_metadata),
-              "books": all_metadata
+              "total_books": len(all_books),
+              "source": "OpenITI 0750AH",
+              "books": [
+                  {
+                      "title": b['title'],
+                      "text_length": b['text_length'],
+                      "output_file": b['output_file'],
+                      "metadata": b['metadata'],
+                      "text_preview": b['text'][:300] + "..." if len(b['text']) > 300 else b['text']
+                  }
+                  for b in all_books
+              ]
           }
           
-          with open("output_metadata/index.json", "w", encoding="utf-8") as f:
-              json.dump(index_data, f, ensure_ascii=False, indent=2)
+          with open("output/index.json", "w", encoding="utf-8") as f:
+              json.dump(index, f, ensure_ascii=False, indent=2)
           
-          # خلاصه برای دانلود آسان
-          summary = []
-          for book in all_metadata:
-              summary.append({
-                  "title": book['title'],
-                  "text_length": book['text_length'],
-                  "file": book['text_file']
-              })
-          
-          with open("output_metadata/summary.json", "w", encoding="utf-8") as f:
-              json.dump(summary, f, ensure_ascii=False, indent=2)
-          
+          # خلاصه
           print(f"\n{'='*60}")
-          print(f"✅ استخراج کامل شد!")
-          print(f"   📚 کتاب‌ها: {len(all_metadata)}")
-          print(f"   📁 فایل‌های متنی در: output_books/")
-          print(f"   📋 ایندکس در: output_metadata/index.json")
+          print(f"✅ استخراج نهایی:")
+          print(f"   📚 {len(all_books)} کتاب/بخش")
+          total_chars = sum(b['text_length'] for b in all_books)
+          print(f"   📝 مجموع حروف: {total_chars:,}")
+          print(f"   📁 فایل‌ها در پوشه output/")
           print(f"{'='*60}")
-      
-      - name: 📊 نمایش خلاصه نهایی
-        run: |
-          echo "=== خلاصه آثار ذهبی ==="
-          echo ""
           
-          if [ -f "output_metadata/summary.json" ]; then
+          # نمایش عناوین
+          print("\n📋 فهرست کتاب‌های استخراج شده:")
+          for i, b in enumerate(all_books, 1):
+              print(f"   {i}. {b['title']} ({b['text_length']:,} chars)")
+      
+      - name: 📊 نمایش خلاصه
+        run: |
+          if [ -f "output/index.json" ]; then
+              echo "=== ایندکس ذهبی ==="
               python3 -c "
           import json
-          with open('output_metadata/summary.json', 'r', encoding='utf-8') as f:
-              summary = json.load(f)
-          print(f'مجموع: {len(summary)} کتاب')
+          with open('output/index.json', 'r', encoding='utf-8') as f:
+              data = json.load(f)
+          print(f'نویسنده: {data[\"author\"]}')
+          print(f'سال وفات: {data[\"death_year\"]}')
+          print(f'تعداد آثار: {data[\"total_books\"]}')
           print()
-          for i, book in enumerate(summary, 1):
+          for i, book in enumerate(data['books'], 1):
               print(f'{i}. {book[\"title\"]}')
-              print(f'   📏 حجم: {book[\"text_length\"]:,} chars')
-              print(f'   📄 فایل: {book[\"file\"]}')
+              print(f'   حجم: {book[\"text_length\"]:,} chars')
+              print(f'   فایل: {book[\"output_file\"]}')
               print()
-              if i >= 10:
-                  print(f'... و {len(summary)-10} کتاب دیگر')
-                  break
-              "
-          else
-              echo "❌ فایل summary.json یافت نشد!"
+          "
           fi
           
           echo ""
           echo "=== حجم فایل‌های خروجی ==="
-          du -sh output_books/ output_metadata/ 2>/dev/null || echo "پوشه‌ها خالی هستند"
+          du -sh output/
+          echo ""
+          echo "=== فایل‌های تولید شده ==="
+          ls -lh output/
       
       - name: 📤 آپلود همه خروجی‌ها
         uses: actions/upload-artifact@v4
         with:
-          name: dhahabi-all-works
-          path: |
-            output_books/
-            output_metadata/
+          name: dhahabi-exact-works
+          path: output/
           retention-days: 90
           compression-level: 6
-      
-      - name: 📤 آپلود ایندکس جداگانه
-        uses: actions/upload-artifact@v4
-        with:
-          name: dhahabi-index
-          path: output_metadata/index.json
-          retention-days: 90
