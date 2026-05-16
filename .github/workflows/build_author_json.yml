@@ -1,0 +1,61 @@
+name: Build Author JSON - Dhahabi
+
+on:
+  workflow_dispatch:  # اجرای دستی
+  push:
+    paths:
+      - '.github/workflows/build_author_json.yml'
+      - 'scripts/build_author.py'
+
+jobs:
+  build-dhahabi:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: 🐍 Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: 📦 Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyyaml
+      
+      - name: 🔨 Build Dhahabi JSON
+        run: |
+          python scripts/build_author.py \
+            --name "شمس الدین ذهبی" \
+            --id "0748Dhahabi" \
+            --year 748 \
+            --output dhahabi.json
+      
+      - name: 📊 Show output info
+        run: |
+          echo "=== File Info ==="
+          ls -lh dhahabi.json
+          echo ""
+          echo "=== Book Count ==="
+          python -c "import json; data=json.load(open('dhahabi.json','r',encoding='utf-8')); print(f'Total books: {data[\"total_books\"]}')"
+          echo ""
+          echo "=== First Book Preview ==="
+          python -c "
+          import json
+          data = json.load(open('dhahabi.json','r',encoding='utf-8'))
+          if data['books']:
+              book = data['books'][0]
+              print(f'Title: {book[\"title\"]}')
+              print(f'Text length: {book[\"text_length\"]:,} chars')
+              print(f'First 200 chars: {book[\"text\"][:200]}...')
+          "
+      
+      - name: 📤 Upload JSON as Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dhahabi-complete-works
+          path: dhahabi.json
+          retention-days: 90
+          compression-level: 6
