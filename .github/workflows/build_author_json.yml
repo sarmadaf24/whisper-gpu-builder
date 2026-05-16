@@ -1,74 +1,66 @@
-name: DEEP SCAN - 6 Missing Authors v2
+name: COMPLETE SCAN 20 Shia Authors
 
 on:
   workflow_dispatch:
 
 jobs:
-  deep-scan:
+  complete-scan:
     runs-on: ubuntu-latest
-    timeout-minutes: 35
-    
-    strategy:
-      fail-fast: false
-      max-parallel: 6
-      matrix:
-        author:
-          - name: "کلینی"
-            deep_patterns: "Kulayni,Kulini,Kulayn,Kafi,كافي,کلینی,كليني,الكليني,UsulKafi,FuruKafi,RawdatKafi"
-            
-          - name: "جابر_جعفی"
-            deep_patterns: "Jabir,Jufi,Juci,جعفي,جعفی,الجعیف,جابر,JabirJuci,JabirYazid"
-            
-          - name: "فضل_شاذان"
-            deep_patterns: "FadlShadhan,Fadl,Shadhan,فضل,شاذان,نیشابوری,Naysaburi,Nishapuri"
-            
-          - name: "علی_قمی"
-            deep_patterns: "AliIbrahim,Qummi,Qomi,قمي,قمی,TafsirQummi,تفسیر,تفسير"
-            
-          - name: "نجاشی"
-            deep_patterns: "Najashi,نجاشي,نجاشی,RijalNajashi,Fihrist,فهرست"
-            
-          - name: "کشی"
-            deep_patterns: "Kashshi,Kashi,كشي,کشی,RijalKashshi,Ikhtiyar,اختیار"
-    
+    timeout-minutes: 120  # 2 ساعت
     steps:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
       
-      - name: Deep Scan All Repos
+      - name: Full Deep Scan
         shell: python
         run: |
-          import os, json, subprocess
+          import os, json, subprocess, time
+
+          # لیست ۲۰ نویسنده با الگوها
+          authors = [
+              {"name": "ثابت_بن_دینار", "patterns": ["Thabit", "Dinar", "ثابت", "دینار", "ابوحمزه", "AbuHamza", "Thumali", "ثمالي"]},
+              {"name": "جابر_جعفی", "patterns": ["Jabir", "Jufi", "Juci", "جعفي", "جعفی", "جابر", "JabirJuci", "JabirYazid"]},
+              {"name": "فضل_شاذان", "patterns": ["FadlShadhan", "Fadl", "Shadhan", "فضل", "شاذان", "FadlIbnShadhan", "Naysaburi", "Nishapuri", "ایضاح", "علل"]},
+              {"name": "احمد_برقی", "patterns": ["AhmadBarqi", "Barqi", "برقي", "برقی", "محاسن", "Mahasin"]},
+              {"name": "احمد_بن_ابی_عبدالله_برقی", "patterns": ["AhmadIbnAbiAbdAllahBarqi", "Barqi", "برقي", "برقی"]},
+              {"name": "صفار_قمی", "patterns": ["SaffarQummi", "Saffar", "صفار", "بصائر", "Basair"]},
+              {"name": "علی_قمی", "patterns": ["AliIbrahimQummi", "Qummi", "قمي", "قمی", "TafsirQummi", "تفسیر", "تفسير"]},
+              {"name": "کلینی", "patterns": ["Kulayni", "Kulini", "Kafi", "كافي", "کلینی", "كليني", "الكليني", "UsulKafi", "FuruKafi", "RawdatKafi"]},
+              {"name": "نجاشی", "patterns": ["Najashi", "نجاشي", "نجاشی", "RijalNajashi", "Fihrist", "فهرست"]},
+              {"name": "کشی", "patterns": ["Kashshi", "Kashi", "كشي", "کشی", "RijalKashshi", "Ikhtiyar", "اختیار", "معرفه"]},
+              {"name": "شیخ_صدوق", "patterns": ["Saduq", "Saduk", "صدوق", "بابویه", "Babawayh", "فقیه", "Faquih", "امالی", "Amali", "خصال"]},
+              {"name": "شیخ_مفید", "patterns": ["Mufid", "مفيد", "مفید", "ارشاد", "Irshad", "اعتقادات"]},
+              {"name": "سید_رضی", "patterns": ["Radi", "رضي", "رضی", "SharifRadi", "نهج", "بلاغه", "NahjBalagha"]},
+              {"name": "سید_مرتضی", "patterns": ["Murtada", "مرتضی", "مرتضي", "SharifMurtada", "امالی", "Amali", "ذریعه"]},
+              {"name": "شیخ_طوسی", "patterns": ["Tusi", "طوسي", "طوسی", "Tahdhib", "تهذیب", "استبصار", "Istibsar", "Mabsut", "مبسوط", "تبیان"]},
+              {"name": "ابن_شهرآشوب", "patterns": ["IbnShahrAshub", "شهرآشوب", "مناقب", "Manaqib"]},
+              {"name": "قطب_راوندی", "patterns": ["QutbRawandi", "راوندي", "راوندی", "خرائج", "Kharaij"]},
+              {"name": "عمادالدین_طبری", "patterns": ["CimadDinTabari", "طبری", "طبري", "بشاره", "مصباح"]},
+              {"name": "محقق_حلی", "patterns": ["MuhaqqiqHilli", "حلي", "حلی", "محقق", "شرایع", "Sharaic"]},
+              {"name": "علامه_حلی", "patterns": ["AllamaHilli", "حلي", "حلی", "علامه", "تذکره", "مختلف", "ارشاد"]}
+          ]
+
+          # مخازن برای بررسی (همه)
+          repos = [f"{c:04d}AH" for c in range(0, 1500, 25)]
           
-          author_name = "${{ matrix.author.name }}"
-          patterns_str = "${{ matrix.author.deep_patterns }}"
-          patterns = patterns_str.split(",")
-          
-          print("=" * 70)
-          print(f"🔬 جستجوی عمیق: {author_name}")
-          print(f"🔍 الگوها: {', '.join(patterns[:6])}...")
-          print("=" * 70)
-          
-          # همه مخازن از 0 تا 1500
-          repos_to_check = [f"{c:04d}AH" for c in range(0, 1500, 25)]
-          
-          all_found = []
-          
-          for repo_name in repos_to_check:
+          # دیکشنری نتیجه نهایی
+          final_results = {author["name"]: [] for author in authors}
+
+          for repo_name in repos:
               repo_url = f"https://github.com/OpenITI/{repo_name}.git"
               target_dir = f"repo_{repo_name}"
               
-              print(f"  📦 {repo_name}...", end=" ")
+              print(f"📦 بررسی {repo_name} ...", end=" ")
               
+              # کلون
               clone_result = subprocess.run(
                   ["git", "clone", "--depth", "1", "--single-branch", repo_url, target_dir],
                   capture_output=True, text=True
               )
-              
               if clone_result.returncode != 0:
-                  print("∅")
+                  print("❌ (کلون ناموفق)")
                   continue
               
               data_dir = os.path.join(target_dir, "data")
@@ -77,62 +69,50 @@ jobs:
                   print("∅")
                   continue
               
-              repo_found = []
-              for folder in sorted(os.listdir(data_dir)):
-                  folder_lower = folder.lower()
-                  for pat in patterns:
-                      if pat.lower() in folder_lower:
-                          repo_found.append(folder)
-                          break
+              all_folders = [f for f in os.listdir(data_dir) if os.path.isdir(os.path.join(data_dir, f))]
+              print(f"{len(all_folders)} پوشه")
               
-              if repo_found:
-                  print(f"🎯 {len(repo_found)}!")
-                  for f in repo_found:
-                      folder_path = os.path.join(data_dir, f)
-                      total_size = 0
-                      has_mARkdown = False
-                      
-                      if os.path.isdir(folder_path):
-                          for root, _, files in os.walk(folder_path):
-                              for file in files:
-                                  total_size += os.path.getsize(os.path.join(root, file))
-                                  if file.endswith('.mARkdown'):
-                                      has_mARkdown = True
-                      
-                      print(f"      📁 {f} ({total_size:,}B) {'📝' if has_mARkdown else '⚠️'}")
-                      all_found.append({
-                          "repo": repo_name,
-                          "folder": f,
-                          "size_bytes": total_size,
-                          "has_mARkdown": has_mARkdown
-                      })
-              else:
-                  print(".")
+              # جستجو برای هر نویسنده
+              for author in authors:
+                  for folder in all_folders:
+                      folder_lower = folder.lower()
+                      for pat in author["patterns"]:
+                          if pat.lower() in folder_lower:
+                              # بررسی حجم و وجود mARkdown
+                              folder_path = os.path.join(data_dir, folder)
+                              total_size = 0
+                              has_mARkdown = False
+                              for root, _, files in os.walk(folder_path):
+                                  for f in files:
+                                      total_size += os.path.getsize(os.path.join(root, f))
+                                      if f.endswith('.mARkdown'):
+                                          has_mARkdown = True
+                              # افزودن به نتایج
+                              final_results[author["name"]].append({
+                                  "repo": repo_name,
+                                  "folder": folder,
+                                  "size_bytes": total_size,
+                                  "has_mARkdown": has_mARkdown
+                              })
+                              break  # پترن یکسان برای یک نویسنده فقط یک بار
               
-              if not repo_found:
-                  subprocess.run(["rm", "-rf", target_dir], check=False)
-          
-          # ذخیره
-          result = {
-              "author": author_name,
-              "repos_checked": len(repos_to_check),
-              "total_found": len(all_found),
-              "books": all_found
-          }
-          
-          safe_name = author_name.replace(" ", "_")
-          filename = f"deepscan_{safe_name}.json"
-          
-          with open(filename, "w", encoding="utf-8") as f:
-              json.dump(result, f, ensure_ascii=False, indent=2)
-          
-          print(f"\n📊 {author_name}: {len(all_found)} کتاب پیدا شد")
-          print(f"📄 ذخیره در: {filename}")
-          print("=" * 70)
+              # حذف مخزن
+              subprocess.run(["rm", "-rf", target_dir], check=False)
+              time.sleep(0.5)  # کمی استراحت
+
+          # ذخیره JSON نهایی
+          with open("complete_scan.json", "w", encoding="utf-8") as f:
+              json.dump(final_results, f, ensure_ascii=False, indent=2)
+
+          # خلاصه
+          print("\n📊 نتایج نهایی:")
+          for author in authors:
+              count = len(final_results[author["name"]])
+              print(f"{author['name']}: {count} کتاب")
       
-      - name: Upload Result
+      - name: Upload Final JSON
         uses: actions/upload-artifact@v4
         with:
-          name: deepscan-${{ strategy.job-index }}
-          path: deepscan_*.json
+          name: complete-scan-20
+          path: complete_scan.json
           retention-days: 7
