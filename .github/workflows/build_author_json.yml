@@ -1,7 +1,7 @@
 name: Build Author JSON - Dhahabi
 
 on:
-  workflow_dispatch:  # اجرای دستی
+  workflow_dispatch:
 
 jobs:
   build-dhahabi:
@@ -21,7 +21,40 @@ jobs:
           python -m pip install --upgrade pip
           pip install pyyaml
       
-      - name: 🔨 Build Dhahabi JSON (Inline Script)
+      - name: 🔍 Find exact author ID first
+        shell: python
+        run: |
+          import os
+          import subprocess
+          
+          repo_url = "https://github.com/OpenITI/0700AH.git"
+          target_dir = "openiti_repo"
+          
+          if not os.path.exists(target_dir):
+              subprocess.run(["git", "clone", "--depth", "1", repo_url, target_dir], check=True)
+          
+          data_dir = os.path.join(target_dir, "data")
+          
+          # جستجوی همه پوشه‌هایی که "Dhahabi" یا "dhahabi" در نام دارند
+          matching_folders = []
+          for folder in sorted(os.listdir(data_dir)):
+              if 'dhahabi' in folder.lower():
+                  matching_folders.append(folder)
+          
+          print("=" * 60)
+          print(f"پوشه‌های مرتبط با ذهبی در OpenITI:")
+          print("=" * 60)
+          for i, folder in enumerate(matching_folders, 1):
+              print(f"{i}. {folder}")
+          
+          if not matching_folders:
+              print("\n❌ هیچ پوشه‌ای با نام Dhahabi یافت نشد!")
+              print("\n🔍 بیایید چند پوشه اول را ببینیم:")
+              all_folders = sorted(os.listdir(data_dir))
+              for f in all_folders[:20]:
+                  print(f"  - {f}")
+      
+      - name: 🔨 Build with correct ID
         shell: python
         run: |
           import os
@@ -29,155 +62,119 @@ jobs:
           import json
           import yaml
           import subprocess
+          import glob
           
-          # ====== تنظیمات نویسنده ======
+          # ====== تنظیمات ======
           AUTHOR_NAME = "شمس الدین ذهبی"
-          AUTHOR_ID = "0748Dhahabi"
+          SEARCH_PATTERN = "dhahabi"  # جستجوی غیرحساس به حروف
           DEATH_YEAR = 748
           OUTPUT_FILE = "dhahabi.json"
-          # ==============================
+          # =====================
           
-          def clone_openiti_repo(death_year, target_dir="openiti_repo"):
-              century = (death_year // 100) * 100
+          def clone_repo():
+              century = (DEATH_YEAR // 100) * 100
               repo_name = f"{century:04d}AH"
               repo_url = f"https://github.com/OpenITI/{repo_name}.git"
-              
-              print(f"📥 در حال کلون کردن مخزن {repo_name} ...")
+              target_dir = "openiti_repo"
               
               if not os.path.exists(target_dir):
-                  result = subprocess.run(
-                      ["git", "clone", "--depth", "1", repo_url, target_dir],
-                      capture_output=True,
-                      text=True
-                  )
-                  if result.returncode != 0:
-                      print(f"❌ خطا در کلون مخزن: {result.stderr}")
-                      sys.exit(1)
-                  print(f"✅ مخزن با موفقیت کلون شد.")
-              else:
-                  print(f"✅ مخزن از قبل وجود دارد.")
-              
+                  print(f"📥 کلون کردن {repo_name}...")
+                  subprocess.run(["git", "clone", "--depth", "1", repo_url, target_dir], check=True)
               return target_dir
           
-          def find_author_folders(repo_dir, author_id):
+          def find_by_pattern(repo_dir, pattern):
+              """پیدا کردن پوشه‌ها بر اساس الگوی نام (غیرحساس به حروف)"""
               data_dir = os.path.join(repo_dir, "data")
+              folders = []
               
               if not os.path.exists(data_dir):
-                  print(f"❌ دایرکتوری data یافت نشد: {data_dir}")
-                  return []
+                  return folders
               
-              author_folders = []
               for folder in sorted(os.listdir(data_dir)):
-                  if folder.startswith(author_id):
-                      author_folders.append(os.path.join(data_dir, folder))
+                  if pattern.lower() in folder.lower():
+                      folders.append(os.path.join(data_dir, folder))
               
-              print(f"📚 {len(author_folders)} کتاب برای {author_id} یافت شد.")
-              return author_folders
+              return folders
           
-          def parse_yaml_metadata(readme_path):
+          def parse_metadata(readme_path):
               try:
                   with open(readme_path, 'r', encoding='utf-8') as f:
                       content = f.read()
-                  
                   if content.startswith('---'):
                       parts = content.split('---')
                       if len(parts) >= 3:
-                          yaml_content = parts[1]
-                          return yaml.safe_load(yaml_content)
-                  
+                          return yaml.safe_load(parts[1])
                   return {}
-              except Exception as e:
-                  print(f"⚠️ خطا در خواندن فراداده {readme_path}: {e}")
+              except:
                   return {}
           
-          def extract_book_text(book_folder):
-              full_text_parts = []
-              text_files = []
-              
+          def extract_text(book_folder):
+              texts = []
               for root, _, files in os.walk(book_folder):
-                  for file in files:
+                  for file in sorted(files):
                       if file == 'README.md':
                           continue
                       if file.endswith(('.mARkdown', '.txt', '.md')):
-                          text_files.append(os.path.join(root, file))
-              
-              for file_path in sorted(text_files):
-                  try:
-                      with open(file_path, 'r', encoding='utf-8') as f:
-                          content = f.read()
-                          if content.strip():
-                              full_text_parts.append(content)
-                  except UnicodeDecodeError:
-                      try:
-                          with open(file_path, 'r', encoding='utf-16') as f:
-                              content = f.read()
-                              if content.strip():
-                                  full_text_parts.append(content)
-                      except Exception as e:
-                          print(f"⚠️ خطا در خواندن {file_path}: {e}")
-                  except Exception as e:
-                      print(f"⚠️ خطا در خواندن {file_path}: {e}")
-              
-              return "\n\n".join(full_text_parts)
+                          try:
+                              with open(os.path.join(root, file), 'r', encoding='utf-8') as f:
+                                  content = f.read()
+                                  if content.strip():
+                                      texts.append(content)
+                          except:
+                              pass
+              return "\n\n".join(texts)
           
-          # ====== اجرای اصلی ======
+          # ====== اجرا ======
           print(f"\n{'='*60}")
-          print(f"🔄 شروع پردازش: {AUTHOR_NAME}")
+          print(f"🔄 پردازش: {AUTHOR_NAME}")
           print(f"{'='*60}\n")
           
-          repo_dir = clone_openiti_repo(DEATH_YEAR)
-          author_folders = find_author_folders(repo_dir, AUTHOR_ID)
+          repo_dir = clone_repo()
+          folders = find_by_pattern(repo_dir, SEARCH_PATTERN)
           
-          if not author_folders:
-              print(f"❌ هیچ کتابی یافت نشد.")
-              empty_data = {
+          print(f"📚 {len(folders)} پوشه یافت شد.\n")
+          
+          if not folders:
+              print("❌ هیچ کتابی یافت نشد. در حال ایجاد فایل خالی...")
+              data = {
                   "author_name": AUTHOR_NAME,
-                  "author_id": AUTHOR_ID,
                   "death_year": DEATH_YEAR,
                   "source": "OpenITI",
                   "total_books": 0,
                   "books": []
               }
               with open(OUTPUT_FILE, 'w', encoding='utf-8') as f:
-                  json.dump(empty_data, f, ensure_ascii=False, indent=2)
+                  json.dump(data, f, ensure_ascii=False, indent=2)
               sys.exit(0)
           
           all_books = []
           
-          for i, folder in enumerate(author_folders, 1):
+          for i, folder in enumerate(folders, 1):
               folder_name = os.path.basename(folder)
-              print(f"📖 [{i}/{len(author_folders)}] پردازش: {folder_name}")
+              print(f"📖 [{i}/{len(folders)}] {folder_name}")
               
-              readme_path = os.path.join(folder, 'README.md')
-              
+              readme = os.path.join(folder, 'README.md')
               metadata = {}
-              if os.path.exists(readme_path):
-                  metadata = parse_yaml_metadata(readme_path)
+              if os.path.exists(readme):
+                  metadata = parse_metadata(readme)
               
-              book_title = folder_name
-              if metadata:
-                  if 'title' in metadata:
-                      book_title = metadata['title']
-                  elif 'Title' in metadata:
-                      book_title = metadata['Title']
+              title = metadata.get('title') or metadata.get('Title') or folder_name
+              text = extract_text(folder)
               
-              text = extract_book_text(folder)
-              
-              book_entry = {
+              all_books.append({
                   "folder_name": folder_name,
-                  "title": book_title,
+                  "title": title,
                   "metadata": metadata,
                   "text_length": len(text),
                   "text": text
-              }
+              })
               
-              all_books.append(book_entry)
-              print(f"   ✅ عنوان: {book_title}")
-              print(f"   📝 طول متن: {len(text):,} کاراکتر")
+              print(f"   ✅ {title}")
+              print(f"   📝 {len(text):,} chars")
           
-          author_data = {
+          # خروجی JSON
+          data = {
               "author_name": AUTHOR_NAME,
-              "author_id": AUTHOR_ID,
               "death_year": DEATH_YEAR,
               "source": "OpenITI",
               "total_books": len(all_books),
@@ -185,33 +182,36 @@ jobs:
           }
           
           with open(OUTPUT_FILE, 'w', encoding='utf-8') as f:
-              json.dump(author_data, f, ensure_ascii=False, indent=2)
+              json.dump(data, f, ensure_ascii=False, indent=2)
           
-          file_size = os.path.getsize(OUTPUT_FILE) / (1024 * 1024)
+          size_mb = os.path.getsize(OUTPUT_FILE) / (1024 * 1024)
           
           print(f"\n{'='*60}")
-          print(f"✅ پردازش با موفقیت به پایان رسید!")
-          print(f"   📚 تعداد کتاب‌ها: {len(all_books)}")
-          print(f"   💾 حجم فایل خروجی: {file_size:.2f} MB")
-          print(f"   📄 فایل: {OUTPUT_FILE}")
-          print(f"{'='*60}\n")
+          print(f"✅ تمام شد!")
+          print(f"   📚 کتاب‌ها: {len(all_books)}")
+          print(f"   💾 حجم: {size_mb:.2f} MB")
+          print(f"{'='*60}")
       
-      - name: 📊 Show output info
+      - name: 📊 خلاصه خروجی
         run: |
-          echo "=== File Info ==="
+          echo "=== اطلاعات فایل ==="
           ls -lh dhahabi.json
           echo ""
-          echo "=== Book Titles ==="
+          echo "=== فهرست کتاب‌ها ==="
           python3 -c "
           import json
           with open('dhahabi.json', 'r', encoding='utf-8') as f:
               data = json.load(f)
-          print(f'Total books: {data[\"total_books\"]}')
-          for i, book in enumerate(data['books'], 1):
-              print(f'{i}. {book[\"title\"]} ({book[\"text_length\"]:,} chars)')
+          print(f'مجموع: {data[\"total_books\"]} کتاب')
+          print()
+          for i, b in enumerate(data['books'], 1):
+              print(f'{i}. {b[\"title\"]}')
+              print(f'   حجم متن: {b[\"text_length\"]:,} chars')
+              print(f'   پوشه: {b[\"folder_name\"]}')
+              print()
           "
       
-      - name: 📤 Upload JSON as Artifact
+      - name: 📤 آپلود JSON
         uses: actions/upload-artifact@v4
         with:
           name: dhahabi-complete-works
