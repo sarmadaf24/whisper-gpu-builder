@@ -1,118 +1,101 @@
-name: COMPLETE SCAN 20 Shia Authors
+name: INSPECT - Allama Hilli Structure
 
 on:
   workflow_dispatch:
 
 jobs:
-  complete-scan:
+  inspect:
     runs-on: ubuntu-latest
-    timeout-minutes: 120  # 2 ساعت
+    timeout-minutes: 15
+    
     steps:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
       
-      - name: Full Deep Scan
+      - name: Clone & Inspect
         shell: python
         run: |
-          import os, json, subprocess, time
-
-          # لیست ۲۰ نویسنده با الگوها
-          authors = [
-              {"name": "ثابت_بن_دینار", "patterns": ["Thabit", "Dinar", "ثابت", "دینار", "ابوحمزه", "AbuHamza", "Thumali", "ثمالي"]},
-              {"name": "جابر_جعفی", "patterns": ["Jabir", "Jufi", "Juci", "جعفي", "جعفی", "جابر", "JabirJuci", "JabirYazid"]},
-              {"name": "فضل_شاذان", "patterns": ["FadlShadhan", "Fadl", "Shadhan", "فضل", "شاذان", "FadlIbnShadhan", "Naysaburi", "Nishapuri", "ایضاح", "علل"]},
-              {"name": "احمد_برقی", "patterns": ["AhmadBarqi", "Barqi", "برقي", "برقی", "محاسن", "Mahasin"]},
-              {"name": "احمد_بن_ابی_عبدالله_برقی", "patterns": ["AhmadIbnAbiAbdAllahBarqi", "Barqi", "برقي", "برقی"]},
-              {"name": "صفار_قمی", "patterns": ["SaffarQummi", "Saffar", "صفار", "بصائر", "Basair"]},
-              {"name": "علی_قمی", "patterns": ["AliIbrahimQummi", "Qummi", "قمي", "قمی", "TafsirQummi", "تفسیر", "تفسير"]},
-              {"name": "کلینی", "patterns": ["Kulayni", "Kulini", "Kafi", "كافي", "کلینی", "كليني", "الكليني", "UsulKafi", "FuruKafi", "RawdatKafi"]},
-              {"name": "نجاشی", "patterns": ["Najashi", "نجاشي", "نجاشی", "RijalNajashi", "Fihrist", "فهرست"]},
-              {"name": "کشی", "patterns": ["Kashshi", "Kashi", "كشي", "کشی", "RijalKashshi", "Ikhtiyar", "اختیار", "معرفه"]},
-              {"name": "شیخ_صدوق", "patterns": ["Saduq", "Saduk", "صدوق", "بابویه", "Babawayh", "فقیه", "Faquih", "امالی", "Amali", "خصال"]},
-              {"name": "شیخ_مفید", "patterns": ["Mufid", "مفيد", "مفید", "ارشاد", "Irshad", "اعتقادات"]},
-              {"name": "سید_رضی", "patterns": ["Radi", "رضي", "رضی", "SharifRadi", "نهج", "بلاغه", "NahjBalagha"]},
-              {"name": "سید_مرتضی", "patterns": ["Murtada", "مرتضی", "مرتضي", "SharifMurtada", "امالی", "Amali", "ذریعه"]},
-              {"name": "شیخ_طوسی", "patterns": ["Tusi", "طوسي", "طوسی", "Tahdhib", "تهذیب", "استبصار", "Istibsar", "Mabsut", "مبسوط", "تبیان"]},
-              {"name": "ابن_شهرآشوب", "patterns": ["IbnShahrAshub", "شهرآشوب", "مناقب", "Manaqib"]},
-              {"name": "قطب_راوندی", "patterns": ["QutbRawandi", "راوندي", "راوندی", "خرائج", "Kharaij"]},
-              {"name": "عمادالدین_طبری", "patterns": ["CimadDinTabari", "طبری", "طبري", "بشاره", "مصباح"]},
-              {"name": "محقق_حلی", "patterns": ["MuhaqqiqHilli", "حلي", "حلی", "محقق", "شرایع", "Sharaic"]},
-              {"name": "علامه_حلی", "patterns": ["AllamaHilli", "حلي", "حلی", "علامه", "تذکره", "مختلف", "ارشاد"]}
-          ]
-
-          # مخازن برای بررسی (همه)
-          repos = [f"{c:04d}AH" for c in range(0, 1500, 25)]
+          import os, subprocess, json
+          from collections import defaultdict
           
-          # دیکشنری نتیجه نهایی
-          final_results = {author["name"]: [] for author in authors}
-
-          for repo_name in repos:
-              repo_url = f"https://github.com/OpenITI/{repo_name}.git"
-              target_dir = f"repo_{repo_name}"
+          repo_url = "https://github.com/OpenITI/0750AH.git"
+          target_dir = "repo"
+          author_folder = "0726CallamaHilli"
+          
+          print("📥 کلون مخزن 0750AH...")
+          subprocess.run(["git", "clone", "--depth", "1", repo_url, target_dir], check=True)
+          
+          folder_path = os.path.join(target_dir, "data", author_folder)
+          
+          if not os.path.exists(folder_path):
+              print(f"❌ پوشه {author_folder} یافت نشد!")
+              exit(1)
+          
+          print(f"\n{'='*70}")
+          print(f"📁 بررسی: {author_folder}")
+          print(f"{'='*70}")
+          
+          # آمار کلی
+          total_files = 0
+          total_size = 0
+          extensions = defaultdict(lambda: {"count": 0, "size": 0})
+          subfolders = []
+          
+          for root, dirs, files in os.walk(folder_path):
+              # محاسبه عمق
+              rel_path = os.path.relpath(root, folder_path)
+              if rel_path != '.':
+                  subfolders.append(rel_path)
               
-              print(f"📦 بررسی {repo_name} ...", end=" ")
-              
-              # کلون
-              clone_result = subprocess.run(
-                  ["git", "clone", "--depth", "1", "--single-branch", repo_url, target_dir],
-                  capture_output=True, text=True
-              )
-              if clone_result.returncode != 0:
-                  print("❌ (کلون ناموفق)")
-                  continue
-              
-              data_dir = os.path.join(target_dir, "data")
-              if not os.path.exists(data_dir):
-                  subprocess.run(["rm", "-rf", target_dir], check=False)
-                  print("∅")
-                  continue
-              
-              all_folders = [f for f in os.listdir(data_dir) if os.path.isdir(os.path.join(data_dir, f))]
-              print(f"{len(all_folders)} پوشه")
-              
-              # جستجو برای هر نویسنده
-              for author in authors:
-                  for folder in all_folders:
-                      folder_lower = folder.lower()
-                      for pat in author["patterns"]:
-                          if pat.lower() in folder_lower:
-                              # بررسی حجم و وجود mARkdown
-                              folder_path = os.path.join(data_dir, folder)
-                              total_size = 0
-                              has_mARkdown = False
-                              for root, _, files in os.walk(folder_path):
-                                  for f in files:
-                                      total_size += os.path.getsize(os.path.join(root, f))
-                                      if f.endswith('.mARkdown'):
-                                          has_mARkdown = True
-                              # افزودن به نتایج
-                              final_results[author["name"]].append({
-                                  "repo": repo_name,
-                                  "folder": folder,
-                                  "size_bytes": total_size,
-                                  "has_mARkdown": has_mARkdown
-                              })
-                              break  # پترن یکسان برای یک نویسنده فقط یک بار
-              
-              # حذف مخزن
-              subprocess.run(["rm", "-rf", target_dir], check=False)
-              time.sleep(0.5)  # کمی استراحت
-
-          # ذخیره JSON نهایی
-          with open("complete_scan.json", "w", encoding="utf-8") as f:
-              json.dump(final_results, f, ensure_ascii=False, indent=2)
-
-          # خلاصه
-          print("\n📊 نتایج نهایی:")
-          for author in authors:
-              count = len(final_results[author["name"]])
-              print(f"{author['name']}: {count} کتاب")
-      
-      - name: Upload Final JSON
-        uses: actions/upload-artifact@v4
-        with:
-          name: complete-scan-20
-          path: complete_scan.json
-          retention-days: 7
+              for file in files:
+                  file_path = os.path.join(root, file)
+                  size = os.path.getsize(file_path)
+                  total_files += 1
+                  total_size += size
+                  
+                  ext = os.path.splitext(file)[1] or '(بدون پسوند)'
+                  extensions[ext]["count"] += 1
+                  extensions[ext]["size"] += size
+          
+          print(f"\n📊 آمار کلی:")
+          print(f"   📁 زیرپوشه: {len(subfolders)}")
+          print(f"   📄 فایل: {total_files}")
+          print(f"   💾 حجم کل: {total_size:,} bytes ({total_size/(1024*1024):.1f} MB)")
+          
+          print(f"\n📋 انواع فایل‌ها:")
+          for ext, info in sorted(extensions.items(), key=lambda x: x[1]['size'], reverse=True):
+              count = info['count']
+              size = info['size']
+              print(f"   {ext:20s} | {count:4d} فایل | {size:12,} bytes | {size/(1024*1024):7.1f} MB")
+          
+          print(f"\n📁 زیرپوشه‌ها:")
+          for sf in sorted(subfolders):
+              sf_path = os.path.join(folder_path, sf)
+              sf_size = sum(os.path.getsize(os.path.join(sf_path, f)) 
+                           for f in os.listdir(sf_path) if os.path.isfile(os.path.join(sf_path, f)))
+              print(f"   📁 {sf} ({sf_size:,} bytes)")
+          
+          print(f"\n📄 فایل‌های سطح اول:")
+          for item in sorted(os.listdir(folder_path)):
+              item_path = os.path.join(folder_path, item)
+              if os.path.isfile(item_path):
+                  size = os.path.getsize(item_path)
+                  print(f"   📄 {item} ({size:,} bytes)")
+                  
+                  # نمایش محتوای ۲۰۰ کاراکتر اول
+                  try:
+                      with open(item_path, 'r', encoding='utf-8') as f:
+                          preview = f.read(200)
+                      print(f"      └─ {preview[:150]}...")
+                  except:
+                      print(f"      └─ (قابل خواندن نیست)")
+          
+          # نمایش README.md
+          readme_path = os.path.join(folder_path, "README.md")
+          if os.path.exists(readme_path):
+              print(f"\n📋 README.md:")
+              with open(readme_path, 'r', encoding='utf-8') as f:
+                  content = f.read(500)
+              print(content)
