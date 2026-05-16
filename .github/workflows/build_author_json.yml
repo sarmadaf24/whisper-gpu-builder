@@ -1,12 +1,12 @@
-name: INSPECT - Allama Hilli Structure
+name: INSPECT ALL 19 AUTHORS
 
 on:
   workflow_dispatch:
 
 jobs:
-  inspect:
+  inspect-all:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 60
     
     steps:
       - name: Setup Python
@@ -14,88 +14,164 @@ jobs:
         with:
           python-version: '3.11'
       
-      - name: Clone & Inspect
+      - name: Inspect All Authors
         shell: python
         run: |
-          import os, subprocess, json
+          import os, json, subprocess
           from collections import defaultdict
           
-          repo_url = "https://github.com/OpenITI/0750AH.git"
-          target_dir = "repo"
-          author_folder = "0726CallamaHilli"
+          # لیست ۱۹ نویسنده با پوشه و مخزن
+          authors = [
+              {"name": "ثابت_بن_دینار", "folder": "0148AbuHamzaThumali", "repo": "0150AH"},
+              {"name": "احمد_برقی", "folder": "0274AhmadBarqi", "repo": "0275AH"},
+              {"name": "صفار_قمی", "folder": "0290IbnHasanSaffar", "repo": "0300AH"},
+              {"name": "علی_قمی", "folder": "0329IbnIbrahimQummi", "repo": "0350AH"},
+              {"name": "کلینی", "folder": "0329IbnYacqubKulayni", "repo": "0350AH"},
+              {"name": "نجاشی", "folder": "0450Najashi", "repo": "0450AH"},
+              {"name": "کشی", "folder": "0329IbnCumarKashshi", "repo": "0350AH"},
+              {"name": "شیخ_صدوق", "folder": "0381IbnBabawayhSaduq", "repo": "0400AH"},
+              {"name": "شیخ_مفید", "folder": "0413ShaykhMufid", "repo": "0425AH"},
+              {"name": "سید_رضی", "folder": "0406SharifRadi", "repo": "0425AH"},
+              {"name": "سید_مرتضی", "folder": "0436SharifMurtada", "repo": "0450AH"},
+              {"name": "شیخ_طوسی", "folder": "0460ShaykhTusi", "repo": "0475AH"},
+              {"name": "ابن_شهرآشوب", "folder": "0588IbnShahrAshub", "repo": "0600AH"},
+              {"name": "عمادالدین_طبری", "folder": "0504IbnMuhammadCimadDinTabari", "repo": "0525AH"},
+              {"name": "محقق_حلی", "folder": "0676IbnHasanMuhaqqiqHilli", "repo": "0700AH"},
+              {"name": "علامه_حلی", "folder": "0726CallamaHilli", "repo": "0750AH"},
+          ]
           
-          print("📥 کلون مخزن 0750AH...")
-          subprocess.run(["git", "clone", "--depth", "1", repo_url, target_dir], check=True)
+          # کش برای مخازن کلون شده
+          cloned_repos = {}
           
-          folder_path = os.path.join(target_dir, "data", author_folder)
+          all_results = {}
           
-          if not os.path.exists(folder_path):
-              print(f"❌ پوشه {author_folder} یافت نشد!")
-              exit(1)
-          
-          print(f"\n{'='*70}")
-          print(f"📁 بررسی: {author_folder}")
-          print(f"{'='*70}")
-          
-          # آمار کلی
-          total_files = 0
-          total_size = 0
-          extensions = defaultdict(lambda: {"count": 0, "size": 0})
-          subfolders = []
-          
-          for root, dirs, files in os.walk(folder_path):
-              # محاسبه عمق
-              rel_path = os.path.relpath(root, folder_path)
-              if rel_path != '.':
-                  subfolders.append(rel_path)
+          for author in authors:
+              author_name = author['name']
+              folder_name = author['folder']
+              repo_name = author['repo']
               
-              for file in files:
-                  file_path = os.path.join(root, file)
-                  size = os.path.getsize(file_path)
-                  total_files += 1
-                  total_size += size
+              print(f"\n{'='*70}")
+              print(f"🔍 {author_name}")
+              print(f"   پوشه: {folder_name}")
+              print(f"   مخزن: {repo_name}")
+              print(f"{'='*70}")
+              
+              # کلون مخزن اگر قبلاً کلون نشده
+              if repo_name not in cloned_repos:
+                  repo_url = f"https://github.com/OpenITI/{repo_name}.git"
+                  target_dir = f"repo_{repo_name}"
                   
-                  ext = os.path.splitext(file)[1] or '(بدون پسوند)'
-                  extensions[ext]["count"] += 1
-                  extensions[ext]["size"] += size
-          
-          print(f"\n📊 آمار کلی:")
-          print(f"   📁 زیرپوشه: {len(subfolders)}")
-          print(f"   📄 فایل: {total_files}")
-          print(f"   💾 حجم کل: {total_size:,} bytes ({total_size/(1024*1024):.1f} MB)")
-          
-          print(f"\n📋 انواع فایل‌ها:")
-          for ext, info in sorted(extensions.items(), key=lambda x: x[1]['size'], reverse=True):
-              count = info['count']
-              size = info['size']
-              print(f"   {ext:20s} | {count:4d} فایل | {size:12,} bytes | {size/(1024*1024):7.1f} MB")
-          
-          print(f"\n📁 زیرپوشه‌ها:")
-          for sf in sorted(subfolders):
-              sf_path = os.path.join(folder_path, sf)
-              sf_size = sum(os.path.getsize(os.path.join(sf_path, f)) 
-                           for f in os.listdir(sf_path) if os.path.isfile(os.path.join(sf_path, f)))
-              print(f"   📁 {sf} ({sf_size:,} bytes)")
-          
-          print(f"\n📄 فایل‌های سطح اول:")
-          for item in sorted(os.listdir(folder_path)):
-              item_path = os.path.join(folder_path, item)
-              if os.path.isfile(item_path):
-                  size = os.path.getsize(item_path)
-                  print(f"   📄 {item} ({size:,} bytes)")
+                  if not os.path.exists(target_dir):
+                      print(f"   📥 کلون {repo_name}...")
+                      result = subprocess.run(
+                          ["git", "clone", "--depth", "1", repo_url, target_dir],
+                          capture_output=True, text=True
+                      )
+                      if result.returncode != 0:
+                          print(f"   ❌ کلون ناموفق")
+                          all_results[author_name] = {"error": "clone_failed"}
+                          continue
                   
-                  # نمایش محتوای ۲۰۰ کاراکتر اول
-                  try:
-                      with open(item_path, 'r', encoding='utf-8') as f:
-                          preview = f.read(200)
-                      print(f"      └─ {preview[:150]}...")
-                  except:
-                      print(f"      └─ (قابل خواندن نیست)")
+                  cloned_repos[repo_name] = target_dir
+              
+              repo_dir = cloned_repos[repo_name]
+              folder_path = os.path.join(repo_dir, "data", folder_name)
+              
+              if not os.path.exists(folder_path):
+                  print(f"   ❌ پوشه یافت نشد")
+                  all_results[author_name] = {"error": "folder_not_found"}
+                  continue
+              
+              # آمار
+              total_files = 0
+              total_size = 0
+              extensions = defaultdict(lambda: {"count": 0, "size": 0})
+              subfolders_list = []
+              big_files = []
+              
+              for root, dirs, files in os.walk(folder_path):
+                  rel_path = os.path.relpath(root, folder_path)
+                  if rel_path != '.':
+                      subfolders_list.append(rel_path)
+                  
+                  for file in files:
+                      file_path = os.path.join(root, file)
+                      try:
+                          size = os.path.getsize(file_path)
+                      except:
+                          continue
+                      
+                      total_files += 1
+                      total_size += size
+                      
+                      ext = os.path.splitext(file)[1] or '(بدون_پسوند)'
+                      extensions[ext]["count"] += 1
+                      extensions[ext]["size"] += size
+                      
+                      # فایل‌های بزرگ (بیشتر از ۱۰۰ کیلوبایت)
+                      if size > 100000:
+                          big_files.append({
+                              "file": file,
+                              "path": os.path.join(rel_path, file),
+                              "size": size
+                          })
+              
+              # خلاصه
+              summary = {
+                  "folder": folder_name,
+                  "repo": repo_name,
+                  "total_size_bytes": total_size,
+                  "total_size_mb": round(total_size / (1024*1024), 2),
+                  "total_files": total_files,
+                  "subfolders_count": len(subfolders_list),
+                  "big_files_count": len(big_files),
+                  "extensions": {ext: {"count": info["count"], "size_mb": round(info["size"]/(1024*1024), 2)} 
+                                for ext, info in sorted(extensions.items(), key=lambda x: x[1]['size'], reverse=True)},
+                  "subfolders": subfolders_list[:30],
+                  "big_files_sample": [{"file": bf["file"], "size_mb": round(bf["size"]/(1024*1024), 2)} 
+                                       for bf in sorted(big_files, key=lambda x: x['size'], reverse=True)[:15]]
+              }
+              
+              all_results[author_name] = summary
+              
+              print(f"   📊 حجم کل: {summary['total_size_mb']} MB")
+              print(f"   📄 فایل‌ها: {total_files}")
+              print(f"   📁 زیرپوشه‌ها: {len(subfolders_list)}")
+              print(f"   📚 فایل‌های بزرگ (>100KB): {len(big_files)}")
+              
+              if subfolders_list:
+                  print(f"   📋 کتاب‌ها:")
+                  for sf in subfolders_list[:10]:
+                      print(f"      📁 {sf}")
+                  if len(subfolders_list) > 10:
+                      print(f"      ... و {len(subfolders_list)-10} کتاب دیگر")
           
-          # نمایش README.md
-          readme_path = os.path.join(folder_path, "README.md")
-          if os.path.exists(readme_path):
-              print(f"\n📋 README.md:")
-              with open(readme_path, 'r', encoding='utf-8') as f:
-                  content = f.read(500)
-              print(content)
+          # ذخیره JSON نهایی
+          output = {
+              "total_authors_inspected": len(all_results),
+              "authors_with_books": sum(1 for v in all_results.values() if v.get('total_size_mb', 0) > 0.1),
+              "results": all_results
+          }
+          
+          with open("inspection_results.json", "w", encoding="utf-8") as f:
+              json.dump(output, f, ensure_ascii=False, indent=2)
+          
+          # خلاصه نهایی
+          print(f"\n{'='*70}")
+          print(f"📊 خلاصه نهایی:")
+          print(f"{'='*70}")
+          for name, info in all_results.items():
+              if "error" in info:
+                  print(f"   ❌ {name}: {info['error']}")
+              else:
+                  books = info['subfolders_count'] if info['subfolders_count'] > 0 else info['big_files_count']
+                  print(f"   {'✅' if books > 0 else '⚠️'} {name}: {info['total_size_mb']} MB | {books} کتاب")
+          
+          print(f"\n📄 ذخیره در: inspection_results.json")
+      
+      - name: Upload Results
+        uses: actions/upload-artifact@v4
+        with:
+          name: inspection-19-authors
+          path: inspection_results.json
+          retention-days: 7
