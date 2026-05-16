@@ -1,57 +1,92 @@
-name: SCAN - Find 10 Authors in OpenITI
+name: DEEP SCAN - 6 Missing Authors
 
 on:
   workflow_dispatch:
 
 jobs:
-  scan-authors:
+  deep-scan:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     
     strategy:
       fail-fast: false
-      max-parallel: 10
+      max-parallel: 6
       matrix:
         author:
+          - name: "محمد بن یعقوب کلینی"
+            deep_patterns:
+              - "Kulayni"
+              - "Kulini"  
+              - "Kulayn"
+              - "Kafi"
+              - "Kāfī"
+              - "كافي"
+              - "کلینی"
+              - "كليني"
+              - "الكليني"
+              - "RijalKulayni"
+              - "UsulKafi"
+              - "FuruKafi"
+              - "RawdatKafi"
+            all_repos: true
+            
           - name: "جابر بن یزید جعفی"
-            patterns: ["JabirJufi", "Jabir", "Jufi", "جعفي", "جعفی", "الجعیف"]
-            years: [125, 150]
+            deep_patterns:
+              - "Jabir"
+              - "Jufi"
+              - "Juci"
+              - "جعفي"
+              - "جعفی"
+              - "الجعیف"
+              - "جابر"
+              - "JabirJuci"
+              - "JabirYazid"
+            all_repos: true
             
-          - name: "فضل بن شاذان نیشابوری"
-            patterns: ["FadlShadhan", "Fadl", "Shadhan", "فضل", "شاذان", "نیشابوری"]
-            years: [250, 275]
-            
-          - name: "احمد بن محمد برقی"
-            patterns: ["AhmadBarqi", "Barqi", "برقي", "برقی", "محاسن"]
-            years: [250, 275, 300]
-            
-          - name: "محمد بن حسن صفار قمی"
-            patterns: ["SaffarQummi", "Saffar", "صفار", "بصائر"]
-            years: [275, 300]
+          - name: "فضل بن شاذان"
+            deep_patterns:
+              - "FadlShadhan"
+              - "Fadl"
+              - "Shadhan"
+              - "فضل"
+              - "شاذان"
+              - "نیشابوری"
+              - "Naysaburi"
+              - "Nishapuri"
+            all_repos: true
             
           - name: "علی بن ابراهیم قمی"
-            patterns: ["AliIbrahimQummi", "AliIbrahim", "قمی", "قمي", "تفسیر"]
-            years: [300, 325]
-            
-          - name: "محمد بن یعقوب کلینی"
-            patterns: ["Kulayni", "Kulini", "كليني", "کلینی", "كافي", "کافی"]
-            years: [325, 350]
+            deep_patterns:
+              - "AliIbrahim"
+              - "Qummi"
+              - "Qomi"
+              - "قمي"
+              - "قمی"
+              - "TafsirQummi"
+              - "تفسیر"
+              - "تفسير"
+            all_repos: true
             
           - name: "احمد بن علی نجاشی"
-            patterns: ["Najashi", "نجاشي", "نجاشی", "رجال"]
-            years: [425, 450, 475]
+            deep_patterns:
+              - "Najashi"
+              - "نجاشي"
+              - "نجاشی"
+              - "RijalNajashi"
+              - "Fihrist"
+              - "فهرست"
+            all_repos: true
             
           - name: "محمد بن عمر کشی"
-            patterns: ["Kashshi", "Kashi", "كشي", "کشی", "رجال"]
-            years: [325, 350]
-            
-          - name: "محمد بن علی صدوق"
-            patterns: ["Saduq", "Saduk", "صدوق", "بابویه", "Babawayh", "فقیه"]
-            years: [375, 400]
-            
-          - name: "محمد بن محمد مفید"
-            patterns: ["Mufid", "مفيد", "مفید", "ارشاد", "Irshad"]
-            years: [400, 425]
+            deep_patterns:
+              - "Kashshi"
+              - "Kashi"
+              - "كشي"
+              - "کشی"
+              - "RijalKashshi"
+              - "Ikhtiyar"
+              - "اختیار"
+            all_repos: true
     
     steps:
       - name: Setup Python
@@ -59,107 +94,123 @@ jobs:
         with:
           python-version: '3.11'
       
-      - name: Scan OpenITI for Author
+      - name: Deep Scan All Repos
         shell: python
         run: |
-          import os
-          import subprocess
-          import json
+          import os, json, subprocess, re
           
           author = ${{ toJson(matrix.author) }}
           author_name = author['name']
-          patterns = author['patterns']
-          possible_years = author['years']
+          patterns = author['deep_patterns']
           
           print("=" * 70)
-          print(f"🔍 اسکن: {author_name}")
+          print(f"🔬 جستجوی عمیق: {author_name}")
+          print(f"🔍 الگوها: {', '.join(patterns)}")
           print("=" * 70)
           
-          # مخازن برای جستجو
+          # همه مخازن از 0000 تا 1500
           repos_to_check = []
-          for y in possible_years:
-              century = (y // 100) * 100
+          for century in range(0, 1500, 25):
               repos_to_check.append(f"{century:04d}AH")
-              
-              # مخازن اطراف هم
-              if century >= 100:
-                  repos_to_check.append(f"{century-25:04d}AH")
-              repos_to_check.append(f"{century+25:04d}AH")
-          
-          # حذف تکراری‌ها
-          repos_to_check = sorted(set(repos_to_check))
           
           all_found = []
+          repos_with_results = 0
           
           for repo_name in repos_to_check:
               repo_url = f"https://github.com/OpenITI/{repo_name}.git"
               target_dir = f"repo_{repo_name}"
               
-              print(f"\n  📦 بررسی مخزن {repo_name}...", end=" ")
+              print(f"  📦 {repo_name}...", end=" ")
               
-              # کلون اگر وجود نداشته باشد
-              if not os.path.exists(target_dir):
-                  result = subprocess.run(
-                      ["git", "clone", "--depth", "1", "--single-branch", repo_url, target_dir],
-                      capture_output=True, text=True
-                  )
-                  if result.returncode != 0:
-                      print("❌ (کلون نشد)")
-                      continue
+              # فقط بررسی کن اگر مخزن وجود دارد
+              clone_result = subprocess.run(
+                  ["git", "clone", "--depth", "1", "--single-branch", repo_url, target_dir],
+                  capture_output=True, text=True
+              )
+              
+              if clone_result.returncode != 0:
+                  print("∅")
+                  continue
               
               data_dir = os.path.join(target_dir, "data")
               if not os.path.exists(data_dir):
-                  print("❌ (data ندارد)")
+                  subprocess.run(["rm", "-rf", target_dir], check=False)
+                  print("∅")
                   continue
               
-              # جستجو با همه الگوها
+              # جستجوی عمیق
               repo_found = []
-              for pattern in patterns:
-                  for folder in sorted(os.listdir(data_dir)):
-                      if pattern.lower() in folder.lower():
+              all_folders = sorted(os.listdir(data_dir))
+              
+              for folder in all_folders:
+                  folder_lower = folder.lower()
+                  for pattern in patterns:
+                      if pattern.lower() in folder_lower:
                           if folder not in repo_found:
                               repo_found.append(folder)
+                          break
               
               if repo_found:
-                  print(f"✅ {len(repo_found)} کتاب")
+                  print(f"🎯 {len(repo_found)}!")
+                  repos_with_results += 1
                   for f in repo_found:
-                      print(f"      📁 {f}")
+                      # بررسی کن فایل mARkdown دارد یا نه
+                      folder_path = os.path.join(data_dir, f)
+                      has_mARkdown = False
+                      total_size = 0
+                      
+                      if os.path.isdir(folder_path):
+                          for root, _, files in os.walk(folder_path):
+                              for file in files:
+                                  file_path = os.path.join(root, file)
+                                  total_size += os.path.getsize(file_path)
+                                  if file.endswith('.mARkdown'):
+                                      has_mARkdown = True
+                      
+                      print(f"      📁 {f} ({total_size:,} bytes) {'📝 متن دارد' if has_mARkdown else '⚠️ بدون متن'}")
+                      
                       all_found.append({
                           "repo": repo_name,
-                          "folder": f
+                          "folder": f,
+                          "size_bytes": total_size,
+                          "has_mARkdown": has_mARkdown
                       })
               else:
-                  print("❌")
-                  
-                  # حذف مخازن بدون نتیجه برای صرفه‌جویی در فضا
+                  print(".")
+              
+              # حذف برای فضا
+              if not repo_found:
                   subprocess.run(["rm", "-rf", target_dir], check=False)
           
-          # ذخیره نتایج
+          # نتیجه نهایی
           result = {
-              "author_name": author_name,
-              "patterns_used": patterns,
-              "repos_checked": repos_to_check,
+              "author": author_name,
+              "total_repos_checked": len(repos_to_check),
+              "repos_with_results": repos_with_results,
               "total_found": len(all_found),
               "books": all_found
           }
           
           safe_name = author_name.replace(" ", "_")[:30]
-          with open(f"scan_result_{safe_name}.json", "w", encoding="utf-8") as f:
+          with open(f"deepscan_{safe_name}.json", "w", encoding="utf-8") as f:
               json.dump(result, f, ensure_ascii=False, indent=2)
           
-          print(f"\n  {'='*60}")
-          print(f"  📊 نتیجه برای {author_name}:")
-          print(f"     📚 کتاب پیدا شده: {len(all_found)}")
-          print(f"     📦 مخازن بررسی شده: {len(repos_to_check)}")
-          print(f"  {'='*60}\n")
+          print(f"\n{'='*70}")
+          print(f"📊 نتیجه نهایی برای {author_name}:")
+          print(f"   📚 کتاب پیدا شده: {len(all_found)}")
+          print(f"   📦 مخازن بررسی شده: {len(repos_to_check)}")
+          print(f"   🎯 مخازن با نتیجه: {repos_with_results}")
           
           if len(all_found) == 0:
-              print("  ⚠️  هیچ کتابی در OpenITI یافت نشد!")
-              print("  💡 باید از منابع دیگر استفاده کرد.")
+              print(f"   ❌ هنوز پیدا نشد!")
+          else:
+              for b in all_found:
+                  print(f"   📁 {b['repo']}/{b['folder']} ({'✅ متن' if b['has_mARkdown'] else '⚠️ بدون متن'})")
+          print("=" * 70)
       
-      - name: Upload Scan Result
+      - name: Upload Deep Scan Result
         uses: actions/upload-artifact@v4
         with:
-          name: scan-${{ matrix.author.name }}
-          path: scan_result_*.json
+          name: deepscan-${{ matrix.author.name | replace(' ', '-') }}
+          path: deepscan_*.json
           retention-days: 7
