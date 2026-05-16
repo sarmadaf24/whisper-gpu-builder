@@ -1,4 +1,4 @@
-name: DEEP SCAN - 6 Missing Authors
+name: DEEP SCAN - 6 Missing Authors v2
 
 on:
   workflow_dispatch:
@@ -6,7 +6,7 @@ on:
 jobs:
   deep-scan:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 35
     
     strategy:
       fail-fast: false
@@ -14,28 +14,22 @@ jobs:
       matrix:
         author:
           - name: "کلینی"
-            deep_patterns: ["Kulayni", "Kulini", "Kulayn", "Kafi", "Kāfī", "كافي", "کلینی", "كليني", "الكليني", "UsulKafi", "FuruKafi", "RawdatKafi"]
-            all_repos: true
+            deep_patterns: "Kulayni,Kulini,Kulayn,Kafi,كافي,کلینی,كليني,الكليني,UsulKafi,FuruKafi,RawdatKafi"
             
           - name: "جابر_جعفی"
-            deep_patterns: ["Jabir", "Jufi", "Juci", "جعفي", "جعفی", "الجعیف", "جابر", "JabirJuci", "JabirYazid"]
-            all_repos: true
+            deep_patterns: "Jabir,Jufi,Juci,جعفي,جعفی,الجعیف,جابر,JabirJuci,JabirYazid"
             
           - name: "فضل_شاذان"
-            deep_patterns: ["FadlShadhan", "Fadl", "Shadhan", "فضل", "شاذان", "نیشابوری", "Naysaburi", "Nishapuri"]
-            all_repos: true
+            deep_patterns: "FadlShadhan,Fadl,Shadhan,فضل,شاذان,نیشابوری,Naysaburi,Nishapuri"
             
           - name: "علی_قمی"
-            deep_patterns: ["AliIbrahim", "Qummi", "Qomi", "قمي", "قمی", "TafsirQummi", "تفسیر", "تفسير"]
-            all_repos: true
+            deep_patterns: "AliIbrahim,Qummi,Qomi,قمي,قمی,TafsirQummi,تفسیر,تفسير"
             
           - name: "نجاشی"
-            deep_patterns: ["Najashi", "نجاشي", "نجاشی", "RijalNajashi", "Fihrist", "فهرست"]
-            all_repos: true
+            deep_patterns: "Najashi,نجاشي,نجاشی,RijalNajashi,Fihrist,فهرست"
             
           - name: "کشی"
-            deep_patterns: ["Kashshi", "Kashi", "كشي", "کشی", "RijalKashshi", "Ikhtiyar", "اختیار"]
-            all_repos: true
+            deep_patterns: "Kashshi,Kashi,كشي,کشی,RijalKashshi,Ikhtiyar,اختیار"
     
     steps:
       - name: Setup Python
@@ -48,16 +42,16 @@ jobs:
         run: |
           import os, json, subprocess
           
-          author = ${{ toJson(matrix.author) }}
-          author_name = author['name']
-          patterns = author['deep_patterns']
+          author_name = "${{ matrix.author.name }}"
+          patterns_str = "${{ matrix.author.deep_patterns }}"
+          patterns = patterns_str.split(",")
           
           print("=" * 70)
           print(f"🔬 جستجوی عمیق: {author_name}")
-          print(f"🔍 الگوها: {', '.join(patterns[:5])}...")
+          print(f"🔍 الگوها: {', '.join(patterns[:6])}...")
           print("=" * 70)
           
-          # همه مخازن
+          # همه مخازن از 0 تا 1500
           repos_to_check = [f"{c:04d}AH" for c in range(0, 1500, 25)]
           
           all_found = []
@@ -83,12 +77,11 @@ jobs:
                   print("∅")
                   continue
               
-              # جستجو
               repo_found = []
               for folder in sorted(os.listdir(data_dir)):
                   folder_lower = folder.lower()
-                  for pattern in patterns:
-                      if pattern.lower() in folder_lower:
+                  for pat in patterns:
+                      if pat.lower() in folder_lower:
                           repo_found.append(folder)
                           break
               
@@ -102,8 +95,7 @@ jobs:
                       if os.path.isdir(folder_path):
                           for root, _, files in os.walk(folder_path):
                               for file in files:
-                                  file_path = os.path.join(root, file)
-                                  total_size += os.path.getsize(file_path)
+                                  total_size += os.path.getsize(os.path.join(root, file))
                                   if file.endswith('.mARkdown'):
                                       has_mARkdown = True
                       
@@ -129,10 +121,13 @@ jobs:
           }
           
           safe_name = author_name.replace(" ", "_")
-          with open(f"deepscan_{safe_name}.json", "w", encoding="utf-8") as f:
+          filename = f"deepscan_{safe_name}.json"
+          
+          with open(filename, "w", encoding="utf-8") as f:
               json.dump(result, f, ensure_ascii=False, indent=2)
           
           print(f"\n📊 {author_name}: {len(all_found)} کتاب پیدا شد")
+          print(f"📄 ذخیره در: {filename}")
           print("=" * 70)
       
       - name: Upload Result
