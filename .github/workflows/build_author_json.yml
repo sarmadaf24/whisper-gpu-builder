@@ -1,199 +1,110 @@
-name: FINAL EXTRACT - All 16 Authors
+name: SCAN - 20 More Shia Authors
 
 on:
   workflow_dispatch:
 
 jobs:
-  extract-all:
+  scan:
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 90
     
     steps:
-      - name: Setup Python & Install Deps
+      - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
       
-      - name: Install PyYAML
-        run: pip install pyyaml
-      
-      - name: EXTRACT ALL AUTHORS
+      - name: SCAN ALL 20 AUTHORS
         shell: python
         run: |
-          import os, json, subprocess, re
-          import yaml
+          import os, json, subprocess
           
-          # لیست ۱۶ نویسنده
           AUTHORS = [
-              {"name": "ثابت_بن_دینار", "folder": "0148AbuHamzaThumali", "repo": "0150AH", "title_ar": "ثابت بن دينار (أبو حمزة الثمالي)"},
-              {"name": "احمد_برقی", "folder": "0274AhmadBarqi", "repo": "0275AH", "title_ar": "أحمد بن محمد بن خالد البرقي"},
-              {"name": "صفار_قمی", "folder": "0290IbnHasanSaffar", "repo": "0300AH", "title_ar": "محمد بن الحسن الصفار القمي"},
-              {"name": "علی_قمی", "folder": "0329IbnIbrahimQummi", "repo": "0350AH", "title_ar": "علي بن إبراهيم القمي"},
-              {"name": "کلینی", "folder": "0329IbnYacqubKulayni", "repo": "0350AH", "title_ar": "محمد بن يعقوب الكليني"},
-              {"name": "نجاشی", "folder": "0450Najashi", "repo": "0450AH", "title_ar": "أحمد بن علي النجاشي"},
-              {"name": "کشی", "folder": "0329IbnCumarKashshi", "repo": "0350AH", "title_ar": "محمد بن عمر الكشي"},
-              {"name": "شیخ_صدوق", "folder": "0381IbnBabawayhSaduq", "repo": "0400AH", "title_ar": "الشيخ الصدوق"},
-              {"name": "شیخ_مفید", "folder": "0413ShaykhMufid", "repo": "0425AH", "title_ar": "الشيخ المفيد"},
-              {"name": "سید_رضی", "folder": "0406SharifRadi", "repo": "0425AH", "title_ar": "الشريف الرضي"},
-              {"name": "سید_مرتضی", "folder": "0436SharifMurtada", "repo": "0450AH", "title_ar": "الشريف المرتضى"},
-              {"name": "شیخ_طوسی", "folder": "0460ShaykhTusi", "repo": "0475AH", "title_ar": "شيخ الطائفة الطوسي"},
-              {"name": "ابن_شهرآشوب", "folder": "0588IbnShahrAshub", "repo": "0600AH", "title_ar": "ابن شهرآشوب"},
-              {"name": "عمادالدین_طبری", "folder": "0504IbnMuhammadCimadDinTabari", "repo": "0525AH", "title_ar": "عماد الدين الطبري"},
-              {"name": "محقق_حلی", "folder": "0676IbnHasanMuhaqqiqHilli", "repo": "0700AH", "title_ar": "المحقق الحلي"},
-              {"name": "علامه_حلی", "folder": "0726CallamaHilli", "repo": "0750AH", "title_ar": "العلامة الحلي"},
+              {"name": "سید_بن_طاووس", "patterns": ["Tawus", "طاووس", "IbnTawus"]},
+              {"name": "شهید_اول", "patterns": ["ShahidAwwal", "شهيد", "شهید", "MuhammadMakki", "Makki"]},
+              {"name": "فخر_المحققین", "patterns": ["FakhrMuhaqqiqin", "فخر", "IbnMutahhar", "ابن_مطهر"]},
+              {"name": "فاضل_مقداد", "patterns": ["FadilMiqdad", "مقداد", "Siwri", "سیوري"]},
+              {"name": "شهید_ثانی", "patterns": ["ShahidThani", "ZaynDin", "زین_الدین", "عاملي", "Amili"]},
+              {"name": "شیخ_بهایی", "patterns": ["BahaDin", "بهایی", "بهاء", "BahaAmili"]},
+              {"name": "میرداماد", "patterns": ["MirDamad", "داماد", "Astarabadi", "استرآبادي"]},
+              {"name": "فیض_کاشانی", "patterns": ["FaydKashani", "فيض", "فیض", "Muhsin"]},
+              {"name": "علامه_مجلسی", "patterns": ["Majlisi", "مجلسی", "Majlisi", "Bihar"]},
+              {"name": "حر_عاملی", "patterns": ["HurrAmili", "حر", "عاملي", "Wasaic"]},
+              {"name": "نعمت_الله_جزایری", "patterns": ["NicmatAllah", "نعمت", "Jazairi", "جزایري"]},
+              {"name": "محقق_سبزواری", "patterns": ["Sabzawari", "سبزواري", "Muhaqqiq"]},
+              {"name": "وحید_بهبهانی", "patterns": ["WahidBihbahani", "وحید", "بهبهاني", "Bihbahani"]},
+              {"name": "بحرالعلوم", "patterns": ["BahrUlum", "بحر", "علوم", "Mahdi"]},
+              {"name": "میرزای_قمی", "patterns": ["MirzaQummi", "میرزا", "قمی", "Qummi"]},
+              {"name": "کاشف_الغطاء", "patterns": ["KashifGhita", "کاشف", "غطاء", "Jacfar"]},
+              {"name": "سید_محمد_مجاهد", "patterns": ["MujahidTabatabai", "مجاهد", "طباطبايي"]},
+              {"name": "محدث_نوری", "patterns": ["MuhaddithNuri", "نوري", "نوری", "Mustadrak"]},
+              {"name": "شیخ_انصاری", "patterns": ["MurtadaAnsari", "انصاري", "انصاری", "Ansari"]},
+              {"name": "صاحب_جواهر", "patterns": ["SahibJawahir", "جواهر", "Najafi", "نجفي"]},
           ]
           
-          # کش مخازن
-          cloned_repos = {}
+          REPOS = [f"{c:04d}AH" for c in range(600, 1400, 25)]
           
-          # پوشه نهایی
-          FINAL_DIR = "final_package"
-          os.makedirs(FINAL_DIR, exist_ok=True)
+          final_results = {}
           
-          # توابع تمیزکاری
-          def clean_text(raw_text):
-              lines = raw_text.split('\n')
-              clean_lines = []
-              for line in lines:
-                  if re.match(r'^#META#', line.strip()): continue
-                  if line.strip() == '#META#Header#End#': continue
-                  if re.match(r'^PageV', line.strip()): continue
-                  if re.match(r'^ms\d+$', line.strip()): continue
-                  if '~~' in line: line = line.replace('~~', '')
-                  if line.startswith('### |') or line.startswith('### ||'): continue
-                  if line.startswith('# '): line = line[2:]
-                  elif line.startswith('## '): line = line[3:]
-                  elif line.startswith('### '): line = line[4:]
-                  clean_lines.append(line)
+          for repo_name in REPOS:
+              repo_url = f"https://github.com/OpenITI/{repo_name}.git"
+              repo_dir = f"repo_{repo_name}"
               
-              result = []
-              prev_empty = False
-              for line in clean_lines:
-                  is_empty = not line.strip()
-                  if is_empty and prev_empty: continue
-                  result.append(line)
-                  prev_empty = is_empty
-              return '\n'.join(result).strip()
+              print(f"📦 {repo_name}...", end=" ")
+              
+              if not os.path.exists(repo_dir):
+                  result = subprocess.run(["git", "clone", "--depth", "1", repo_url, repo_dir], 
+                                         capture_output=True, text=True)
+                  if result.returncode != 0:
+                      print("❌")
+                      continue
+              
+              data_dir = os.path.join(repo_dir, "data")
+              if not os.path.exists(data_dir):
+                  print("∅")
+                  continue
+              
+              folders = [f for f in os.listdir(data_dir) if os.path.isdir(os.path.join(data_dir, f))]
+              found_any = False
+              
+              for author in AUTHORS:
+                  for folder in folders:
+                      folder_lower = folder.lower()
+                      for pat in author["patterns"]:
+                          if pat.lower() in folder_lower:
+                              if author["name"] not in final_results:
+                                  final_results[author["name"]] = []
+                              
+                              folder_path = os.path.join(data_dir, folder)
+                              total_size = sum(os.path.getsize(os.path.join(r,f)) 
+                                             for r,_,fs in os.walk(folder_path) for f in fs)
+                              
+                              final_results[author["name"]].append({
+                                  "repo": repo_name,
+                                  "folder": folder,
+                                  "size_mb": round(total_size/(1024*1024), 2)
+                              })
+                              found_any = True
+                              break
+              
+              if found_any:
+                  print(f"🎯")
+              else:
+                  print(".")
+                  subprocess.run(["rm", "-rf", repo_dir], check=False)
           
-          # حلقه اصلی
-          ALL_SUMMARY = []
+          # ذخیره نتایج
+          with open("scan_20_results.json", "w", encoding="utf-8") as f:
+              json.dump(final_results, f, ensure_ascii=False, indent=2)
           
-          for idx, author in enumerate(AUTHORS, 1):
-              author_name = author['name']
-              folder_name = author['folder']
-              repo_name = author['repo']
-              title_ar = author['title_ar']
-              
-              print(f"\n{'#'*70}")
-              print(f"📚 [{idx}/{len(AUTHORS)}] {title_ar}")
-              print(f"{'#'*70}")
-              
-              # ساخت پوشه خروجی
-              author_dir = os.path.join(FINAL_DIR, author_name)
-              os.makedirs(author_dir, exist_ok=True)
-              
-              # کلون مخزن
-              if repo_name not in cloned_repos:
-                  repo_dir = f"repo_{repo_name}"
-                  if not os.path.exists(repo_dir):
-                      print(f"📥 کلون {repo_name}...")
-                      subprocess.run(["git", "clone", "--depth", "1", 
-                                      f"https://github.com/OpenITI/{repo_name}.git", repo_dir], 
-                                     check=True, capture_output=True)
-                  cloned_repos[repo_name] = repo_dir
-              
-              repo_dir = cloned_repos[repo_name]
-              folder_path = os.path.join(repo_dir, "data", folder_name)
-              
-              books_extracted = []
-              
-              # جستجوی فایل‌های بزرگ
-              for root, dirs, files in os.walk(folder_path):
-                  for file in sorted(files):
-                      file_path = os.path.join(root, file)
-                      try:
-                          size = os.path.getsize(file_path)
-                      except:
-                          continue
-                      
-                      if size < 50000: continue
-                      if file.endswith(('.yml', '.md')): continue
-                      
-                      try:
-                          with open(file_path, 'r', encoding='utf-8') as f:
-                              raw_text = f.read()
-                      except:
-                          continue
-                      
-                      # استخراج متادیتا
-                      meta = {}
-                      for key, pattern in {
-                          'title': r'#META#\s+020\.BookTITLE\s+::\s+(.+)',
-                          'author': r'#META#\s+010\.AuthorNAME\s+::\s+(.+)',
-                          'subject': r'#META#\s+021\.BookSUBJ\s+::\s+(.+)',
-                          'volumes': r'#META#\s+022\.BookVOLS\s+::\s+(.+)',
-                          'editor': r'#META#\s+040\.EdEDITOR\s+::\s+(.+)',
-                          'publisher': r'#META#\s+043\.EdPUBLISHER\s+::\s+(.+)',
-                      }.items():
-                          m = re.search(pattern, raw_text)
-                          if m and m.group(1).strip() not in ['NODATA', 'NOTGIVEN', '']:
-                              meta[key] = m.group(1).strip()
-                      
-                      title = meta.get('title', file.replace(folder_name+'.', ''))
-                      clean = clean_text(raw_text)
-                      
-                      safe_name = re.sub(r'[^\w\-_]', '_', title)[:60]
-                      txt_path = os.path.join(author_dir, f"{safe_name}.txt")
-                      
-                      with open(txt_path, 'w', encoding='utf-8') as f:
-                          f.write(f"العنوان: {title}\n")
-                          if 'author' in meta: f.write(f"المؤلف: {meta['author']}\n")
-                          if 'subject' in meta: f.write(f"الموضوع: {meta['subject']}\n")
-                          f.write("="*70 + "\n\n")
-                          f.write(clean)
-                      
-                      books_extracted.append({
-                          "title": title,
-                          "file": file,
-                          "size_mb": round(size/(1024*1024), 2),
-                          "text_length": len(clean),
-                          "metadata": meta
-                      })
-                      
-                      print(f"   ✅ {title} ({round(size/(1024*1024),1)} MB)")
-              
-              # ذخیره JSON
-              author_json = {
-                  "author": title_ar,
-                  "folder": author_name,
-                  "repo": repo_name,
-                  "total_books": len(books_extracted),
-                  "books": books_extracted
-              }
-              
-              with open(os.path.join(author_dir, "metadata.json"), 'w', encoding='utf-8') as f:
-                  json.dump(author_json, f, ensure_ascii=False, indent=2)
-              
-              ALL_SUMMARY.append({
-                  "author": title_ar,
-                  "folder": author_name,
-                  "total_books": len(books_extracted)
-              })
-              
-              print(f"   📊 مجموع: {len(books_extracted)} کتاب")
-          
-          # ایندکس نهایی
-          with open(os.path.join(FINAL_DIR, "00_INDEX.json"), 'w', encoding='utf-8') as f:
-              json.dump({"total_authors": len(ALL_SUMMARY), "authors": ALL_SUMMARY}, f, ensure_ascii=False, indent=2)
-          
-          print(f"\n{'='*70}")
-          print(f"🎉 اتمام! {len(ALL_SUMMARY)} نویسنده پردازش شد")
-          print(f"📁 خروجی: {FINAL_DIR}/")
+          print(f"\n📊 نتایج:")
+          for author in AUTHORS:
+              count = len(final_results.get(author["name"], []))
+              print(f"   {author['name']}: {count} پوشه")
       
-      - name: Upload Final Package
+      - name: Upload Results
         uses: actions/upload-artifact@v4
         with:
-          name: ALL-16-AUTHORS-FINAL
-          path: final_package/
+          name: scan-20-results
+          path: scan_20_results.json
           retention-days: 7
-          compression-level: 6
