@@ -1,4 +1,4 @@
-name: Extract Dhahabi - All Real Books
+name: Extract Dhahabi - Clean Final Version
 
 on:
   workflow_dispatch:
@@ -14,7 +14,7 @@ jobs:
         with:
           python-version: '3.11'
       
-      - name: Clone & Extract All Real Books
+      - name: Clone & Extract Clean Books
         shell: python
         run: |
           import os
@@ -22,7 +22,6 @@ jobs:
           import subprocess
           import re
           
-          # کلون مخزن
           print("📥 کلون کردن مخزن 0750AH...")
           subprocess.run(
               ["git", "clone", "--depth", "1", 
@@ -31,10 +30,10 @@ jobs:
           )
           
           dhahabi_path = "repo/data/0748Dhahabi"
-          output_dir = "dhahabi_books"
+          output_dir = "dhahabi_clean"
           os.makedirs(output_dir, exist_ok=True)
           
-          # فهرست کتاب‌های معروف ذهبی با نام عربی
+          # دیکشنری عناوین عربی
           book_titles_ar = {
               "TarikhIslam": "تاريخ الإسلام ووفيات المشاهير والأعلام",
               "SiyarAclamNubala": "سير أعلام النبلاء",
@@ -44,33 +43,97 @@ jobs:
               "CibarFiKhabar": "العبر في خبر من غبر",
               "MughniFiDucafa": "المغني في الضعفاء",
               "DiwanDucafa": "ديوان الضعفاء والمتروكين",
-              "MucjamShuyukh": "معجم الشيوخ",
+              "MucjamShuyukh": "معجم الشيوخ الكبير",
               "MukhtasarCuluww": "مختصر العلو للعلي الغفار",
-              "Culuww": "العلو للعلي الغفار",
-              "MukhtasarMinDubaythi": "المختصر من تاريخ ابن الدبيثي",
+              "Culuww": "العلو للعلي العظيم",
+              "MukhtasarMinDubaythi": "المختصر المحتاج إليه من تاريخ ابن الدبيثي",
               "MucjamMuhaddithin": "معجم المحدثين",
-              "Kabair": "الكبائر",
-              "Muhadhdhab": "المهذب في اختصار السنن الكبير",
-              "TadhhibTahdhib": "تهذيب تهذيب الكمال",
               "MucinFiTabaqatMuhaddithin": "المعين في طبقات المحدثين",
-              "ManzumTabaqatHuffaz": "منظومة طبقات الحفاظ",
-              "MuqaddimaZahra": "المقدمة الزهراء في إعراب القرآن",
-              "TibbNabawi": "الطب النبوي",
-              "ManaqibAbiHanifa": "مناقب أبي حنيفة",
-              "IthbatShafaca": "إثبات الشفاعة",
-              "ZaghlCilm": "زغل العلم",
-              "TalkhisMawducat": "تلخيص الموضوعات لابن الجوزي",
-              "TajridAsmaSahaba": "تجريد أسماء الصحابة",
-              "RuwatThiqat": "الرواة الثقات",
-              "MuqizaFiCilmMustalah": "الموقظة في علم مصطلح الحديث",
+              "Kashif": "الكاشف في معرفة من له رواية في الكتب الستة",
+              "MacrifaQurraKibar": "معرفة القراء الكبار على الطبقات والأعصار",
+              "ManaqibAbiHanifa": "مناقب الإمام أبي حنيفة وصاحبيه",
+              "TarjamatAbiYusuf": "ترجمة الإمام أبي يوسف",
+              "TarjamatImamShaybani": "ترجمة الإمام محمد بن الحسن الشيباني",
+              "Nubdha": "نبذة في الحديث النبوي",
+              "DhaylCibar": "ذيل العبر",
+              "DhikrAsma": "ذكر أسماء من تكلم فيه وهو موثق",
           }
           
-          real_books = []
-          total_extracted = 0
-          total_size = 0
+          def parse_metadata_from_text(text):
+              """استخراج فراداده از تگ‌های #META#"""
+              metadata = {}
+              
+              patterns = {
+                  'author_name': r'#META#\s+010\.AuthorNAME\s+::\s+(.+?)(?:\n|$)',
+                  'author_aka': r'#META#\s+010\.AuthorAKA\s+::\s+(.+?)(?:\n|$)',
+                  'author_born': r'#META#\s+011\.AuthorBORN\s+::\s+(.+?)(?:\n|$)',
+                  'author_died': r'#META#\s+011\.AuthorDIED\s+::\s+(.+?)(?:\n|$)',
+                  'book_title': r'#META#\s+020\.BookTITLE\s+::\s+(.+?)(?:\n|$)',
+                  'book_subtitle': r'#META#\s+020\.BookTITLESUB\s+::\s+(.+?)(?:\n|$)',
+                  'subject': r'#META#\s+021\.BookSUBJ\s+::\s+(.+?)(?:\n|$)',
+                  'volumes': r'#META#\s+022\.BookVOLS\s+::\s+(.+?)(?:\n|$)',
+                  'language': r'#META#\s+025\.BookLANG\s+::\s+(.+?)(?:\n|$)',
+                  'edition': r'#META#\s+041\.EdNUMBER\s+::\s+(.+?)(?:\n|$)',
+                  'editor': r'#META#\s+040\.EdEDITOR\s+::\s+(.+?)(?:\n|$)',
+                  'publisher': r'#META#\s+043\.EdPUBLISHER\s+::\s+(.+?)(?:\n|$)',
+                  'shamela_url': r'#META#\s+031\.LibURL\s+::\s+(.+?)(?:\n|$)',
+                  'shamela_id': r'#META#\s+030\.LibURI\s+::\s+(.+?)(?:\n|$)',
+              }
+              
+              for key, pattern in patterns.items():
+                  match = re.search(pattern, text)
+                  if match:
+                      value = match.group(1).strip()
+                      if value and value != 'NODATA' and value != 'NOTGIVEN':
+                          metadata[key] = value
+              
+              return metadata
           
-          # فیلتر: فقط پوشه‌هایی که فایل mARkdown دارند
-          print("\n📚 استخراج کتاب‌های واقعی (دارای متن):")
+          def clean_text(text):
+              """تمیزکاری کامل متن"""
+              lines = text.split('\n')
+              clean_lines = []
+              
+              for line in lines:
+                  # حذف خطوط META
+                  if line.strip().startswith('#META#'):
+                      continue
+                  # حذف خط Header
+                  if line.strip() == '#META#Header#End#':
+                      continue
+                  # حذف تگ‌های صفحه
+                  if line.strip().startswith('PageV'):
+                      continue
+                  # حذف تگ‌های ms
+                  if re.match(r'^ms\d+$', line.strip()):
+                      continue
+                  # حذف ~~ که برای اتصال کلمات است
+                  line = line.replace('~~', '')
+                  # حذف # از ابتدای خطوط (فرمت OpenITI)
+                  if line.startswith('# '):
+                      line = line[2:]
+                  elif line.startswith('## '):
+                      line = line[3:]
+                  elif line.startswith('### '):
+                      line = line[4:]
+                  
+                  clean_lines.append(line)
+              
+              # حذف خطوط خالی متوالی
+              final_lines = []
+              prev_empty = False
+              for line in clean_lines:
+                  is_empty = not line.strip()
+                  if is_empty and prev_empty:
+                      continue
+                  final_lines.append(line)
+                  prev_empty = is_empty
+              
+              return '\n'.join(final_lines).strip()
+          
+          all_books = []
+          
+          print("\n📚 استخراج و تمیزکاری کتاب‌های ذهبی:")
           print("=" * 70)
           
           for folder_name in sorted(os.listdir(dhahabi_path)):
@@ -79,7 +142,7 @@ jobs:
               if not os.path.isdir(folder_path):
                   continue
               
-              # پیدا کردن فایل‌های mARkdown (فایل‌های واقعی متن)
+              # پیدا کردن فایل‌های mARkdown
               markdown_files = []
               for root, _, files in os.walk(folder_path):
                   for f in files:
@@ -87,135 +150,129 @@ jobs:
                           markdown_files.append(os.path.join(root, f))
               
               if not markdown_files:
-                  continue  # کتاب متنی ندارد - رد می‌شود
+                  continue
               
-              # استخراج اسم کوتاه کتاب از نام پوشه
-              # 0748Dhahabi.TarikhIslam → TarikhIslam
               short_name = folder_name.replace('0748Dhahabi.', '')
               
-              # عنوان عربی
-              title_ar = book_titles_ar.get(short_name, short_name)
-              
-              # خواندن و ادغام همه فایل‌های mARkdown
-              all_text = []
+              # خواندن و ادغام فایل‌ها
+              raw_text = ''
               for mf in sorted(markdown_files):
                   try:
                       with open(mf, 'r', encoding='utf-8') as f:
-                          content = f.read()
-                          
-                          # تمیزکاری: حذف هدرهای OpenITI
-                          # حذف خطوطی که با ###### یا #META# شروع می‌شوند
-                          lines = content.split('\n')
-                          clean_lines = []
-                          in_header = True
-                          for line in lines:
-                              if in_header and (line.startswith('######') or 
-                                                line.startswith('#META#') or
-                                                line.startswith('#Header#')):
-                                  continue
-                              in_header = False
-                              clean_lines.append(line)
-                          
-                          clean_text = '\n'.join(clean_lines).strip()
-                          if clean_text:
-                              all_text.append(clean_text)
-                  except Exception as e:
-                      print(f"  ⚠️ خطا در خواندن {mf}: {e}")
+                          raw_text += f.read() + '\n'
+                  except:
+                      pass
               
-              if not all_text:
+              if not raw_text.strip():
                   continue
               
-              full_text = '\n\n'.join(all_text)
+              # استخراج فراداده
+              metadata = parse_metadata_from_text(raw_text)
               
-              # محاسبه حجم
-              text_size = len(full_text.encode('utf-8'))
+              # عنوان کتاب
+              title_ar = metadata.get('book_title') or book_titles_ar.get(short_name, short_name)
               
-              # ذخیره فایل
-              safe_filename = f"{short_name}.txt"
-              output_path = os.path.join(output_dir, safe_filename)
+              # تمیزکاری متن
+              clean = clean_text(raw_text)
               
-              with open(output_path, 'w', encoding='utf-8') as f:
+              # ذخیره فایل تمیز
+              safe_name = short_name
+              txt_path = os.path.join(output_dir, f"{safe_name}.txt")
+              
+              with open(txt_path, 'w', encoding='utf-8') as f:
                   f.write(f"العنوان: {title_ar}\n")
-                  f.write(f"اسم الملف: {folder_name}\n")
+                  f.write(f"المؤلف: {metadata.get('author_name', 'الذهبي')}\n")
+                  if 'subject' in metadata:
+                      f.write(f"الموضوع: {metadata['subject']}\n")
+                  if 'volumes' in metadata:
+                      f.write(f"الأجزاء: {metadata['volumes']}\n")
                   f.write("=" * 70 + "\n\n")
-                  f.write(full_text)
+                  f.write(clean)
               
-              real_books.append({
+              book_info = {
                   "short_name": short_name,
                   "title_arabic": title_ar,
-                  "folder_name": folder_name,
-                  "text_length_chars": len(full_text),
-                  "text_size_bytes": text_size,
-                  "output_file": safe_filename
-              })
+                  "text_length_chars": len(clean),
+                  "text_size_bytes": len(clean.encode('utf-8')),
+                  "output_file": f"{safe_name}.txt",
+                  "metadata": metadata
+              }
               
-              total_extracted += 1
-              total_size += text_size
+              all_books.append(book_info)
               
               print(f"✅ {short_name}")
               print(f"   📖 {title_ar}")
-              print(f"   📝 {len(full_text):,} chars | {text_size:,} bytes")
-              print(f"   📁 {safe_filename}")
+              print(f"   📝 {len(clean):,} chars (تمیز)")
+              print(f"   🏷️  {metadata.get('subject', 'بدون موضوع')}")
               print()
           
-          # ذخیره ایندکس JSON
-          index = {
-              "author": "شمس الدين أبو عبد الله محمد بن أحمد الذهبي",
-              "author_latin": "Shams al-Din al-Dhahabi",
-              "death_year_hijri": 748,
-              "death_year_gregorian": "1348 CE",
+          # ذخیره JSON نهایی
+          final_output = {
+              "author": {
+                  "name_arabic": "شمس الدين أبو عبد الله محمد بن أحمد الذهبي",
+                  "name_latin": "Shams al-Din al-Dhahabi",
+                  "death_hijri": 748,
+                  "death_gregorian": "1348 CE"
+              },
               "source": "OpenITI 0750AH",
-              "total_books_in_openiti": len(os.listdir(dhahabi_path)),
-              "books_with_text": total_extracted,
-              "total_size_mb": round(total_size / (1024*1024), 2),
-              "books": real_books
+              "extraction_date": subprocess.run(['date', '+%Y-%m-%d'], capture_output=True, text=True).stdout.strip(),
+              "total_books_found": len(all_books),
+              "total_size_mb": round(sum(b['text_size_bytes'] for b in all_books) / (1024*1024), 2),
+              "books": all_books
           }
           
-          with open(f"{output_dir}/index.json", "w", encoding="utf-8") as f:
-              json.dump(index, f, ensure_ascii=False, indent=2)
+          json_path = os.path.join(output_dir, "dhahabi_complete.json")
+          with open(json_path, 'w', encoding='utf-8') as f:
+              json.dump(final_output, f, ensure_ascii=False, indent=2)
           
-          # خلاصه
           print("=" * 70)
           print(f"📊 خلاصه نهایی:")
-          print(f"   📁 کل پوشه‌ها: {len(os.listdir(dhahabi_path))}")
-          print(f"   ✅ کتاب با متن: {total_extracted}")
-          print(f"   ❌ کتاب بدون متن: {len(os.listdir(dhahabi_path)) - total_extracted}")
-          print(f"   💾 حجم کل: {total_size:,} bytes ({total_size/(1024*1024):.1f} MB)")
+          print(f"   ✅ کتاب با متن تمیز: {len(all_books)}")
+          print(f"   💾 حجم کل: {final_output['total_size_mb']} MB")
           print(f"   📂 خروجی: {output_dir}/")
           print("=" * 70)
           
-          # نمایش کتاب‌های پرحجم
-          print("\n📚 ۱۰ کتاب پرحجم:")
-          sorted_books = sorted(real_books, key=lambda x: x['text_length_chars'], reverse=True)
-          for i, b in enumerate(sorted_books[:10], 1):
-              print(f"   {i}. {b['title_arabic']}")
-              print(f"      {b['text_length_chars']:,} chars | {b['text_size_bytes']/(1024*1024):.1f} MB")
+          # نمایش فراداده کامل یک کتاب نمونه
+          if all_books:
+              print(f"\n📋 نمونه فراداده (کتاب اول):")
+              sample = all_books[0]
+              print(f"   نام کوتاه: {sample['short_name']}")
+              print(f"   عنوان: {sample['title_arabic']}")
+              print(f"   فراداده:")
+              for k, v in sample['metadata'].items():
+                  print(f"      {k}: {v}")
       
-      - name: Show Summary
+      - name: Show Clean Summary
         run: |
-          echo "=== فهرست کتاب‌های استخراج شده ==="
+          echo "=== فهرست کتاب‌های تمیز شده ==="
           python3 -c "
           import json
-          with open('dhahabi_books/index.json', 'r', encoding='utf-8') as f:
+          with open('dhahabi_clean/dhahabi_complete.json', 'r', encoding='utf-8') as f:
               data = json.load(f)
-          print(f'نویسنده: {data[\"author\"]}')
-          print(f'کتاب‌های دارای متن: {data[\"books_with_text\"]}')
+          print(f'نویسنده: {data[\"author\"][\"name_arabic\"]}')
+          print(f'تعداد کتاب: {data[\"total_books_found\"]}')
           print(f'حجم کل: {data[\"total_size_mb\"]} MB')
           print()
           for i, b in enumerate(data['books'], 1):
+              meta = b.get('metadata', {})
               print(f'{i}. {b[\"title_arabic\"]}')
               print(f'   حجم: {b[\"text_length_chars\"]:,} chars')
-              print(f'   فایل: {b[\"output_file\"]}')
+              if 'subject' in meta:
+                  print(f'   موضوع: {meta[\"subject\"]}')
+              if 'volumes' in meta:
+                  print(f'   مجلدات: {meta[\"volumes\"]}')
+              if 'shamela_url' in meta:
+                  print(f'   شامله: {meta[\"shamela_url\"]}')
               print()
           "
           echo ""
           echo "=== فایل‌های تولید شده ==="
-          ls -lh dhahabi_books/
+          ls -lh dhahabi_clean/
       
-      - name: Upload All Books
+      - name: Upload Clean Books
         uses: actions/upload-artifact@v4
         with:
-          name: dhahabi-all-books
-          path: dhahabi_books/
+          name: dhahabi-clean-final
+          path: dhahabi_clean/
           retention-days: 90
           compression-level: 6
