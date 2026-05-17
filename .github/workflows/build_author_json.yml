@@ -1,10 +1,10 @@
-name: DEEP SEARCH - 12 Missing Shia Authors
+name: SCAN - 21 Remaining Authors
 
 on:
   workflow_dispatch:
 
 jobs:
-  deep-search:
+  scan:
     runs-on: ubuntu-latest
     timeout-minutes: 90
     
@@ -14,24 +14,38 @@ jobs:
         with:
           python-version: '3.11'
       
-      - name: Deep Search All Repos
+      - name: SCAN ALL 21
         shell: python
         run: |
           import os, json, subprocess
           
           AUTHORS = [
-              {"name": "جابر_جعفی", "patterns": ["JabirJufi", "JabirYazid", "جابر_جعفي", "JabirJuci", "تفسیر_جابر"]},
-              {"name": "فضل_شاذان", "patterns": ["FadlIbnShadhan", "فضل_شاذان", "ایضاح", "علل_شاذان", "FadlNaysaburi", "نیشابوری_فضل"]},
-              {"name": "قطب_راوندی", "patterns": ["QutbRawandi", "قطب_راوندي", "خرائج", "Kharacij", "قصص_انبیا"]},
-              {"name": "فخر_المحققین", "patterns": ["FakhrMuhaqqiqin", "فخر_المحققین", "IbnMutahhar", "ایضاح_فواید", "IdahFawaid"]},
-              {"name": "بحرالعلوم", "patterns": ["BahrCulum", "بحر_علوم", "مهدی_طباطبایی", "MahdiTabatabai", "فایده", "رجال_بحرالعلوم"]},
-              {"name": "سید_محمد_مجاهد", "patterns": ["MuhammadMujahid", "مجاهد_طباطبایی", "کربلا", "Karbala", "مناهل", "MujahidTabatabai"]},
-              {"name": "ابن_ابی_عقیل", "patterns": ["IbnAbiCaqil", "عماني", "Cumani", "عقیل_عمانی", "متمسک"]},
-              {"name": "ابن_جنید", "patterns": ["IbnJunayd", "اسکافی", "Iskafi", "جنید_اسکافی", "مختصر_احمدی"]},
-              {"name": "مامقانی", "patterns": ["Mamaqani", "مامقاني", "مقباس", "Miqbas", "تنقیح", "Tanqih"]},
+              # ۸ نفر گمشده
+              {"name": "جابر_جعفی", "patterns": ["JabirJufi", "JabirYazid", "جعفي", "Juci", "تفسیر_جابر"]},
+              {"name": "فضل_شاذان", "patterns": ["FadlShadhan", "فضل_شاذان", "ایضاح", "Idah", "نیشابوری_فضل"]},
+              {"name": "قطب_راوندی", "patterns": ["QutbRawandi", "راوندي", "خرائج", "Kharacij", "قصص"]},
+              {"name": "سید_محمد_مجاهد", "patterns": ["MujahidTabatabai", "مجاهد", "کربلا", "Karbala", "مناهل"]},
+              {"name": "مامقانی", "patterns": ["Mamaqani", "مامقاني", "Miqbas", "مقباس", "تنقیح"]},
               {"name": "شوشتری", "patterns": ["Shushtari", "شوشتري", "قاموس", "Qamus", "بهج_الصباغه"]},
-              {"name": "بهجة", "patterns": ["Bahjat", "بهجت", "MuhammadTaqiBahjat", "فقه_بهجت", "رساله_عملیه"]},
-              {"name": "حسن_سلیمان_حلی", "patterns": ["HasanIbnSulayman", "حسن_سلیمان", "مختصر_بصایر", "MukhtasarBasair", "محاسن"]},
+              {"name": "محمد_تقی_بهجة", "patterns": ["Bahjat", "بهجت", "MuhammadTaqiBahjat", "رساله_عملیه"]},
+              {"name": "حسن_سلیمان_حلی", "patterns": ["HasanSulayman", "حسن_سلیمان", "مختصر_بصایر", "MukhtasarBasair"]},
+              
+              # ۴ نفر کم حجم
+              {"name": "فخر_المحققین_جدید", "patterns": ["FakhrMuhaqqiqin", "فخر_المحققین", "IdahFawaid", "ایضاح_فواید", "ابن_مطهر_حلی"]},
+              {"name": "بحرالعلوم_جدید", "patterns": ["BahrCulum", "بحر_علوم", "مهدی_طباطبایی", "MahdiTabatabai", "فایده"]},
+              {"name": "ابن_ابی_عقیل_جدید", "patterns": ["IbnAbiCaqil", "عماني", "Cumani", "عقیل", "متمسک"]},
+              {"name": "ابن_جنید_جدید", "patterns": ["IbnJunayd", "اسکافی", "Iskafi", "جنید", "مختصر_احمدی"]},
+              
+              # ۹ نفر فراموش شده
+              {"name": "رضی_الدین_بن_طاووس", "patterns": ["RadiDinTawus", "رضی_طاووس", "IbnTawusRadi", "لهوف"]},
+              {"name": "ابن_ادریس_حلی", "patterns": ["IbnIdrisHilli", "ادریس_حلي", "Sarair", "سرایٔر"]},
+              {"name": "یحیی_بن_سعید_حلی", "patterns": ["YahyaSacid", "یحیی_سعید", "JamicSharaic", "جامع_شرایع"]},
+              {"name": "محقق_کرکی", "patterns": ["MuhaqqiqKaraki", "کرکي", "Karaki", "جامع_مقاصد", "JamicMaqasid"]},
+              {"name": "ملا_احمد_نراقی", "patterns": ["AhmadNaraqi", "نراقي", "Naraqi", "مستند", "Mustanad"]},
+              {"name": "سید_جواد_عاملی", "patterns": ["JawadCamili", "جواد_عاملي", "مفتاح_کرامه", "MiftahKharama"]},
+              {"name": "سید_حسین_بروجردی", "patterns": ["Burujirdi", "بروجردي", "HusaynBurujirdi", "تبویب_وسایل"]},
+              {"name": "امام_خمینی", "patterns": ["Khumayni", "خمیني", "خمینی", "Khomeini", "تحریر_وسیله"]},
+              {"name": "سید_علی_خامنه_ای", "patterns": ["Khaminai", "خامنه_اي", "Khamenei", "خامنه_ای"]},
           ]
           
           REPOS = [f"{c:04d}AH" for c in range(0, 1500, 25)]
@@ -87,16 +101,18 @@ jobs:
           print("📊 نتایج:")
           for author in AUTHORS:
               items = final_results[author["name"]]
-              print(f"\n{author['name']}: {len(items)} پوشه")
+              found_real = [i for i in items if i['size_mb'] > 0.5]
+              print(f"\n{author['name']}: {len(items)} پوشه ({len(found_real)} قابل قبول)")
               for item in items:
-                  print(f"   📁 {item['repo']}/{item['folder']} ({item['size_mb']} MB)")
+                  mark = "✅" if item['size_mb'] > 0.5 else "⚠️"
+                  print(f"   {mark} {item['repo']}/{item['folder']} ({item['size_mb']} MB)")
           
-          with open("deep_search_12.json", "w", encoding="utf-8") as f:
+          with open("scan_21_results.json", "w", encoding="utf-8") as f:
               json.dump(final_results, f, ensure_ascii=False, indent=2)
       
       - name: Upload Results
         uses: actions/upload-artifact@v4
         with:
-          name: deep-search-12-results
-          path: deep_search_12.json
+          name: scan-21-results
+          path: scan_21_results.json
           retention-days: 7
