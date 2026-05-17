@@ -1,12 +1,12 @@
-name: SCAN - 20 More Shia Authors
+name: DEEP SCAN - 5 Missing Authors
 
 on:
   workflow_dispatch:
 
 jobs:
-  scan:
+  deep-scan:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 60
     
     steps:
       - name: Setup Python
@@ -14,37 +14,22 @@ jobs:
         with:
           python-version: '3.11'
       
-      - name: SCAN ALL 20 AUTHORS
+      - name: Deep Scan
         shell: python
         run: |
           import os, json, subprocess
           
           AUTHORS = [
-              {"name": "سید_بن_طاووس", "patterns": ["Tawus", "طاووس", "IbnTawus"]},
-              {"name": "شهید_اول", "patterns": ["ShahidAwwal", "شهيد", "شهید", "MuhammadMakki", "Makki"]},
-              {"name": "فخر_المحققین", "patterns": ["FakhrMuhaqqiqin", "فخر", "IbnMutahhar", "ابن_مطهر"]},
-              {"name": "فاضل_مقداد", "patterns": ["FadilMiqdad", "مقداد", "Siwri", "سیوري"]},
-              {"name": "شهید_ثانی", "patterns": ["ShahidThani", "ZaynDin", "زین_الدین", "عاملي", "Amili"]},
-              {"name": "شیخ_بهایی", "patterns": ["BahaDin", "بهایی", "بهاء", "BahaAmili"]},
-              {"name": "میرداماد", "patterns": ["MirDamad", "داماد", "Astarabadi", "استرآبادي"]},
-              {"name": "فیض_کاشانی", "patterns": ["FaydKashani", "فيض", "فیض", "Muhsin"]},
-              {"name": "علامه_مجلسی", "patterns": ["Majlisi", "مجلسی", "Majlisi", "Bihar"]},
-              {"name": "حر_عاملی", "patterns": ["HurrAmili", "حر", "عاملي", "Wasaic"]},
-              {"name": "نعمت_الله_جزایری", "patterns": ["NicmatAllah", "نعمت", "Jazairi", "جزایري"]},
-              {"name": "محقق_سبزواری", "patterns": ["Sabzawari", "سبزواري", "Muhaqqiq"]},
-              {"name": "وحید_بهبهانی", "patterns": ["WahidBihbahani", "وحید", "بهبهاني", "Bihbahani"]},
-              {"name": "بحرالعلوم", "patterns": ["BahrUlum", "بحر", "علوم", "Mahdi"]},
-              {"name": "میرزای_قمی", "patterns": ["MirzaQummi", "میرزا", "قمی", "Qummi"]},
-              {"name": "کاشف_الغطاء", "patterns": ["KashifGhita", "کاشف", "غطاء", "Jacfar"]},
-              {"name": "سید_محمد_مجاهد", "patterns": ["MujahidTabatabai", "مجاهد", "طباطبايي"]},
-              {"name": "محدث_نوری", "patterns": ["MuhaddithNuri", "نوري", "نوری", "Mustadrak"]},
-              {"name": "شیخ_انصاری", "patterns": ["MurtadaAnsari", "انصاري", "انصاری", "Ansari"]},
-              {"name": "صاحب_جواهر", "patterns": ["SahibJawahir", "جواهر", "Najafi", "نجفي"]},
+              {"name": "فاضل_مقداد", "patterns": ["FadilMiqdad", "Miqdad", "مقداد", "Siwri", "سیوري", "كنز", "Kanz", "Irshad", "ارشاد"]},
+              {"name": "بحرالعلوم", "patterns": ["BahrUlum", "بحر_العلوم", "Bahr", "علوم", "Tabatabai", "طباطبايي", "Mahdi", "مهدي"]},
+              {"name": "سید_محمد_مجاهد", "patterns": ["MujahidTabatabai", "مجاهد", "Mujahid", "طباطبايي", "كربلا", "Karbala"]},
+              {"name": "محدث_نوری", "patterns": ["Nuri", "نوري", "نوری", "Mustadrak", "مستدرك", "Tabarsi", "طبرسي", "Khatima", "خاتمه"]},
+              {"name": "فخر_المحققین", "patterns": ["FakhrMuhaqqiqin", "فخر_المحققین", "IbnMutahharHilli", "ابن_مطهر", "Idah", "ایضاح", "فخر_الدين"]},
           ]
           
-          REPOS = [f"{c:04d}AH" for c in range(600, 1400, 25)]
+          REPOS = [f"{c:04d}AH" for c in range(0, 1500, 25)]
           
-          final_results = {}
+          final_results = {a["name"]: [] for a in AUTHORS}
           
           for repo_name in REPOS:
               repo_url = f"https://github.com/OpenITI/{repo_name}.git"
@@ -72,39 +57,44 @@ jobs:
                       folder_lower = folder.lower()
                       for pat in author["patterns"]:
                           if pat.lower() in folder_lower:
-                              if author["name"] not in final_results:
-                                  final_results[author["name"]] = []
-                              
                               folder_path = os.path.join(data_dir, folder)
                               total_size = sum(os.path.getsize(os.path.join(r,f)) 
                                              for r,_,fs in os.walk(folder_path) for f in fs)
                               
-                              final_results[author["name"]].append({
-                                  "repo": repo_name,
-                                  "folder": folder,
-                                  "size_mb": round(total_size/(1024*1024), 2)
-                              })
-                              found_any = True
+                              # فقط اگه جدید باشه
+                              existing = [f["folder"] for f in final_results[author["name"]]]
+                              if folder not in existing:
+                                  final_results[author["name"]].append({
+                                      "repo": repo_name,
+                                      "folder": folder,
+                                      "size_mb": round(total_size/(1024*1024), 2)
+                                  })
+                                  found_any = True
+                                  print(f"\n      🎯 {author['name']}: {folder} ({round(total_size/(1024*1024),1)} MB)")
                               break
               
-              if found_any:
-                  print(f"🎯")
-              else:
-                  print(".")
+              if not found_any:
+                  print(".", end="")
+              
+              if not found_any:
                   subprocess.run(["rm", "-rf", repo_dir], check=False)
           
-          # ذخیره نتایج
-          with open("scan_20_results.json", "w", encoding="utf-8") as f:
-              json.dump(final_results, f, ensure_ascii=False, indent=2)
+          print(f"\n\n{'='*70}")
+          print("📊 نتایج نهایی:")
+          print(f"{'='*70}")
           
-          print(f"\n📊 نتایج:")
           for author in AUTHORS:
-              count = len(final_results.get(author["name"], []))
-              print(f"   {author['name']}: {count} پوشه")
+              items = final_results[author["name"]]
+              print(f"\n{author['name']}: {len(items)} پوشه")
+              for item in items:
+                  print(f"   📁 {item['repo']}/{item['folder']} ({item['size_mb']} MB)")
+          
+          with open("deep_scan_5.json", "w", encoding="utf-8") as f:
+              json.dump(final_results, f, ensure_ascii=False, indent=2)
       
       - name: Upload Results
         uses: actions/upload-artifact@v4
         with:
-          name: scan-20-results
-          path: scan_20_results.json
+          name: deep-scan-5-results
+          path: deep_scan_5.json
           retention-days: 7
