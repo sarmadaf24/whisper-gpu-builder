@@ -1,4 +1,4 @@
-name: SCAN & EXTRACT - 14 Hanbali Authors
+name: SCAN & EXTRACT - 23 Other Sunni
 
 on:
   workflow_dispatch:
@@ -17,31 +17,38 @@ jobs:
       - name: Install PyYAML
         run: pip install pyyaml
       
-      - name: SCAN & EXTRACT ALL 14 HANBALI
+      - name: SCAN & EXTRACT ALL 23
         shell: python
         run: |
           import os, json, subprocess, re
           
-          # لیست با الگوهای جستجو
           AUTHORS = [
-              {"name": "امام_احمد_حنبل", "patterns": ["IbnHanbal", "حنبل", "Hanbal", "Musnad", "مسند", "AhmadHanbal"], "title_ar": "الإمام أحمد بن حنبل"},
-              {"name": "ابن_حامد", "patterns": ["IbnHamid", "حامد", "CabdAllahIbnHamid", "AbuAbdAllahHamid"], "title_ar": "أبو عبد الله ابن حامد"},
-              {"name": "بربهاری", "patterns": ["Barbahari", "بربهاري", "SharhSunna", "شرح_سنه"], "title_ar": "أبو عبد الله البربهاري"},
-              {"name": "ابویعلی", "patterns": ["AbuYacla", "ابویعلی", "IbnHusaynAbuYacla", "طبقات_حنابله", "TabaqatHanabila"], "title_ar": "محمد بن الحسين أبو يعلى"},
-              {"name": "ابن_عقیل", "patterns": ["IbnCaqil", "عقیل", "AbuWafa", "ابوالوفا", "Funun", "فنون"], "title_ar": "أبو الوفاء ابن عقيل"},
-              {"name": "ابن_قدامه", "patterns": ["IbnQudama", "قدامه", "MuwaffaqDin", "موفق", "Mughni", "مغني", "Cumda", "عمده"], "title_ar": "موفق الدين ابن قدامة"},
-              {"name": "شمس_قدامه", "patterns": ["ShamsDinIbnQudama", "شمس_قدامه", "SharhKabir", "شرح_کبیر"], "title_ar": "شمس الدين ابن قدامة"},
-              {"name": "ابن_تیمیه", "patterns": ["IbnTaymiyya", "تیمیه", "Taymiyya", "Fatawa", "فتاوی", "Iman", "ایمان"], "title_ar": "تقي الدين ابن تيمية"},
-              {"name": "ابن_قیم", "patterns": ["IbnQayyim", "قیم", "QayyimJawziyya", "زاد", "ZadMacad", "اعلام", "Iclam"], "title_ar": "ابن قيم الجوزية"},
-              {"name": "ابن_رجب", "patterns": ["IbnRajab", "رجب", "RajabHanbali", "Qawacid", "قواعد", "فتح_باری", "FathBari"], "title_ar": "ابن رجب الحنبلي"},
-              {"name": "ابن_مفلح", "patterns": ["IbnMuflih", "مفلح", "ShamsDinMuflih", "Furuc", "فروع", "AdabSharciyya"], "title_ar": "شمس الدين ابن مفلح"},
-              {"name": "مرداوی", "patterns": ["Mardawi", "مرداوي", "CalaDinMardawi", "Insaf", "انصاف", "Tashih"], "title_ar": "علاء الدين المرداوي"},
-              {"name": "حجاوی", "patterns": ["Hajjawi", "حجاوي", "ShamsDinHajjawi", "Iqnac", "اقناع", "ZadMustaqnic"], "title_ar": "شمس الدين الحجاوي"},
-              {"name": "بهوتی", "patterns": ["Buhuti", "بهوتي", "MansurBuhuti", "RawdMurbic", "روض", "Kashshaf", "کشاف"], "title_ar": "منصور بن يونس البهوتي"},
+              {"name": "طبری", "patterns": ["Tabari", "طبري", "JamicBayan", "جامع_بیان", "TarikhTabari", "تاریخ_طبري"], "title_ar": "محمد بن جرير الطبري"},
+              {"name": "ابن_ابی_حاتم", "patterns": ["IbnAbiHatim", "ابن_ابي_حاتم", "JarhTacdil", "جرح_تعدیل", "TafsirIbnAbiHatim"], "title_ar": "ابن أبي حاتم الرازي"},
+              {"name": "ابن_حبان", "patterns": ["IbnHibban", "حبان", "SahihIbnHibban", "صحیح_حبان", "Thiqat", "ثقات"], "title_ar": "ابن حبان البستي"},
+              {"name": "حاکم_نیشابوری", "patterns": ["HakimNaysaburi", "حاکم_نیشابوري", "Mustadrak", "مستدرك", "HakimNishapuri"], "title_ar": "الحاكم النيسابوري"},
+              {"name": "ابن_عبدالبر", "patterns": ["IbnCabdBarr", "عبدالبر", "IstiCab", "استیعاب", "Tamhid", "تمهید"], "title_ar": "ابن عبد البر"},
+              {"name": "خطیب_بغدادی", "patterns": ["KhatibBaghdadi", "خطیب_بغدادي", "TarikhBaghdad", "تاریخ_بغداد", "Kifaya"], "title_ar": "الخطيب البغدادي"},
+              {"name": "بغوی", "patterns": ["Baghawi", "بغوي", "SharhSunna", "شرح_سنه", "Masabih", "مصابیح", "TafsirBaghawi"], "title_ar": "الحسين بن مسعود البغوي"},
+              {"name": "ابن_عساکر", "patterns": ["IbnCasakir", "عساكر", "TarikhDimashq", "تاریخ_دمشق", "IbnAsakir"], "title_ar": "ابن عساكر الدمشقي"},
+              {"name": "ابن_اثیر", "patterns": ["IbnAthir", "اثیر", "KamilFiTarikh", "کامل_تاریخ", "UsdGhaba", "اسد_غابه", "NihayaFiGharib"], "title_ar": "ابن الأثير الجزري"},
+              {"name": "ابن_صلاح", "patterns": ["IbnSalah", "صلاح", "CulumHadith", "علوم_حدیث", "MuqaddimaIbnSalah"], "title_ar": "ابن الصلاح"},
+              {"name": "منذری", "patterns": ["Mundhiri", "منذري", "TarghibTarhib", "ترغیب_ترهیب", "MukhtasarMuslim"], "title_ar": "عبد العظيم المنذري"},
+              {"name": "ذهبی", "patterns": ["Dhahabi", "ذهبي", "SiyarAclam", "سیر_اعلام", "TarikhIslam", "میزان_اعتدال"], "title_ar": "شمس الدين الذهبي"},
+              {"name": "ابن_کثیر", "patterns": ["IbnKathir", "کثیر", "Bidaya", "بدایه", "TafsirIbnKathir"], "title_ar": "ابن كثير الدمشقي"},
+              {"name": "ابن_حجر", "patterns": ["IbnHajar", "حجر", "FathBari", "فتح_باري", "Tahdhib", "Isaba", "اصابه"], "title_ar": "ابن حجر العسقلاني"},
+              {"name": "سیوطی", "patterns": ["Suyuti", "سیوطي", "Itqan", "اتقان", "DurrManthur", "در_منثور", "JamicSaghir"], "title_ar": "جلال الدين السيوطي"},
+              {"name": "سخاوی", "patterns": ["Sakhawi", "سخاوي", "DawLamic", "ضو_لامع", "FathMughith"], "title_ar": "شمس الدين السخاوي"},
+              {"name": "شوکانی", "patterns": ["Shawkani", "شوكاني", "NaylAwtar", "نیل_اوطار", "FathQadir", "فتح_قدیر"], "title_ar": "محمد بن علي الشوكاني"},
+              {"name": "خطیب_تبریزی", "patterns": ["KhatibTabrizi", "تبریزي", "MishkatMasabih", "مشکاه_مصابیح", "Ikmac"], "title_ar": "الخطيب التبريزي"},
+              {"name": "جوهری", "patterns": ["Jawhari", "جوهري", "Sihah", "صحاح", "TajLugha"], "title_ar": "إسماعيل الجوهري"},
+              {"name": "ابن_قتیبه", "patterns": ["IbnQutayba", "قتیبه", "CuyunAkhbar", "عیون_اخبار", "Macarif", "معارف", "Shicr"], "title_ar": "ابن قتيبة الدينوري"},
+              {"name": "زمخشری", "patterns": ["Zamakhshari", "زمخشري", "Kashshaf", "کشاف", "Mufassal", "مفصل", "AsasBalagha"], "title_ar": "محمود الزمخشري"},
+              {"name": "صغانی", "patterns": ["Saghani", "صغاني", "MashariqAnwar", "مشارق_انوار", "Cubab", "عباب"], "title_ar": "الحسن الصغاني"},
+              {"name": "جرجانی", "patterns": ["Jurjani", "جرجاني", "Tacrifat", "تعریفات", "SharifJurjani", "شریف_جرجاني"], "title_ar": "علي بن محمد الجرجاني"},
           ]
           
-          REPOS = [f"{c:04d}AH" for c in range(200, 1100, 25)]
-          
+          REPOS = [f"{c:04d}AH" for c in range(200, 1400, 25)]
           cloned_repos = {}
           FINAL_DIR = "final_package"
           os.makedirs(FINAL_DIR, exist_ok=True)
@@ -71,18 +78,15 @@ jobs:
               return '\n'.join(result).strip()
           
           # مرحله ۱: اسکن
-          print("🔍 مرحله ۱: اسکن مخازن...")
+          print("🔍 مرحله ۱: اسکن...")
           author_folders = {a["name"]: [] for a in AUTHORS}
           
           for repo_name in REPOS:
-              repo_url = f"https://github.com/OpenITI/{repo_name}.git"
               repo_dir = f"repo_{repo_name}"
-              
               print(f"📦 {repo_name}...", end=" ")
               
               if not os.path.exists(repo_dir):
-                  result = subprocess.run(["git", "clone", "--depth", "1", repo_url, repo_dir], 
-                                         capture_output=True, text=True)
+                  result = subprocess.run(["git", "clone", "--depth", "1", f"https://github.com/OpenITI/{repo_name}.git", repo_dir], capture_output=True, text=True)
                   if result.returncode != 0:
                       print("❌")
                       continue
@@ -101,12 +105,9 @@ jobs:
                       for pat in author["patterns"]:
                           if pat.lower() in folder_lower:
                               folder_path = os.path.join(data_dir, folder)
-                              total_size = sum(os.path.getsize(os.path.join(r,f)) 
-                                             for r,_,fs in os.walk(folder_path) for f in fs)
+                              total_size = sum(os.path.getsize(os.path.join(r,f)) for r,_,fs in os.walk(folder_path) for f in fs)
                               if folder not in [f["folder"] for f in author_folders[author["name"]]]:
-                                  author_folders[author["name"]].append({
-                                      "repo": repo_name, "folder": folder, "size_mb": round(total_size/(1024*1024),2)
-                                  })
+                                  author_folders[author["name"]].append({"repo": repo_name, "folder": folder, "size_mb": round(total_size/(1024*1024),2)})
                                   found_any = True
                                   print(f"\n      🎯 {author['name']}: {folder} ({round(total_size/(1024*1024),1)} MB)")
                               break
@@ -115,20 +116,14 @@ jobs:
                   print(".", end="")
                   subprocess.run(["rm", "-rf", repo_dir], check=False)
           
-          # نمایش نتایج اسکن
-          print(f"\n\n📊 نتایج اسکن:")
+          # انتخاب بهترین پوشه
           FINAL_AUTHORS = []
           for author in AUTHORS:
               items = author_folders[author["name"]]
               best = max(items, key=lambda x: x['size_mb']) if items else None
               if best and best['size_mb'] > 0.5:
+                  FINAL_AUTHORS.append({"name": author['name'], "folder": best['folder'], "repo": best['repo'], "title_ar": author['title_ar']})
                   print(f"   ✅ {author['name']}: {best['folder']} ({best['size_mb']} MB)")
-                  FINAL_AUTHORS.append({
-                      "name": author['name'],
-                      "folder": best['folder'],
-                      "repo": best['repo'],
-                      "title_ar": author['title_ar']
-                  })
               else:
                   print(f"   ❌ {author['name']}: پیدا نشد")
           
@@ -151,9 +146,7 @@ jobs:
               if repo_name not in cloned_repos:
                   repo_dir = f"repo_{repo_name}"
                   if not os.path.exists(repo_dir):
-                      subprocess.run(["git", "clone", "--depth", "1", 
-                                      f"https://github.com/OpenITI/{repo_name}.git", repo_dir], 
-                                     check=True, capture_output=True)
+                      subprocess.run(["git", "clone", "--depth", "1", f"https://github.com/OpenITI/{repo_name}.git", repo_dir], check=True, capture_output=True)
                   cloned_repos[repo_name] = repo_dir
               
               folder_path = os.path.join(cloned_repos[repo_name], "data", folder_name)
@@ -164,7 +157,6 @@ jobs:
                       file_path = os.path.join(root, file)
                       try: size = os.path.getsize(file_path)
                       except: continue
-                      
                       if size < 50000: continue
                       if file.endswith(('.yml', '.md')): continue
                       
@@ -177,14 +169,12 @@ jobs:
                       for key, pattern in {
                           'title': r'#META#\s+020\.BookTITLE\s+::\s+(.+)',
                           'author': r'#META#\s+010\.AuthorNAME\s+::\s+(.+)',
-                          'subject': r'#META#\s+021\.BookSUBJ\s+::\s+(.+)',
-                          'volumes': r'#META#\s+022\.BookVOLS\s+::\s+(.+)',
                       }.items():
                           m = re.search(pattern, raw_text)
                           if m and m.group(1).strip() not in ['NODATA', 'NOTGIVEN', '']:
                               meta[key] = m.group(1).strip()
                       
-                      title = meta.get('title', file.replace(folder_name+'.', ''))
+                      title = meta.get('title', file[:60])
                       clean = clean_text(raw_text)
                       
                       safe_name = re.sub(r'[^\w\-_]', '_', title)[:60]
@@ -196,12 +186,11 @@ jobs:
                           f.write("="*70 + "\n\n")
                           f.write(clean)
                       
-                      books_extracted.append({"title": title, "size_mb": round(size/(1024*1024),2), "text_length": len(clean), "metadata": meta})
+                      books_extracted.append({"title": title, "size_mb": round(size/(1024*1024),2), "text_length": len(clean)})
                       print(f"   ✅ {title} ({round(size/(1024*1024),1)} MB)")
               
               with open(os.path.join(author_dir, "metadata.json"), 'w', encoding='utf-8') as f:
                   json.dump({"author": title_ar, "total_books": len(books_extracted), "books": books_extracted}, f, ensure_ascii=False, indent=2)
-              
               ALL_SUMMARY.append({"author": title_ar, "total_books": len(books_extracted)})
           
           with open(os.path.join(FINAL_DIR, "00_INDEX.json"), 'w', encoding='utf-8') as f:
@@ -212,7 +201,7 @@ jobs:
       - name: Upload Final Package
         uses: actions/upload-artifact@v4
         with:
-          name: ALL-14-HANBALI-FINAL
+          name: ALL-23-OTHER-SUNNI-FINAL
           path: final_package/
           retention-days: 7
           compression-level: 6
