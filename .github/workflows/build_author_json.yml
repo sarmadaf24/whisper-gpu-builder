@@ -1,12 +1,12 @@
-name: SEARCH - 12 Missing in Archive.org
+name: DOWNLOAD from Shamela via OpenITI
 
 on:
   workflow_dispatch:
 
 jobs:
-  search-archive:
+  download:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
     
     steps:
       - name: Setup Python
@@ -14,85 +14,122 @@ jobs:
         with:
           python-version: '3.11'
       
-      - name: Search Archive.org
+      - name: Install deps
+        run: pip install pyyaml requests
+      
+      - name: Find Shamela Links & Download
         shell: python
         run: |
-          import json, urllib.request, urllib.parse, time
+          import os, json, subprocess, re, requests, time
           
           AUTHORS = [
-              {"name": "جابر_جعفی", "query": "جابر بن يزيد الجعفي"},
-              {"name": "فضل_شاذان", "query": "فضل بن شاذان النيسابوري"},
-              {"name": "قطب_راوندی", "query": "قطب الدين الراوندي"},
-              {"name": "سید_محمد_مجاهد", "query": "السيد محمد المجاهد الطباطبائي"},
-              {"name": "مامقانی", "query": "عبد الله المامقاني"},
-              {"name": "شوشتری", "query": "محمد تقي التستري"},
-              {"name": "بهجة", "query": "محمد تقي بهجت"},
-              {"name": "حسن_سلیمان_حلی", "query": "الحسن بن سليمان الحلي"},
-              {"name": "فخر_المحققین", "query": "فخر المحققين الحلي"},
-              {"name": "رضی_الدین_طاووس", "query": "رضي الدين علي بن طاووس"},
-              {"name": "یحیی_سعید_حلی", "query": "يحيى بن سعيد الحلي"},
-              {"name": "خامنه_ای", "query": "علي الحسيني الخامنئي"},
+              {"name": "جابر_جعفی", "folder": "0148AbuHamzaThumali", "repo": "0150AH"},
+              {"name": "فضل_شاذان", "folder": "0260IbnShadhanAzdi", "repo": "0275AH"},
+              {"name": "قطب_راوندی", "folder": "", "repo": ""},
+              {"name": "مامقانی", "folder": "", "repo": ""},
+              {"name": "شوشتری", "folder": "", "repo": ""},
+              {"name": "حسن_سلیمان_حلی", "folder": "", "repo": ""},
+              {"name": "فخر_المحققین", "folder": "0728IbnMutahharZaydi", "repo": "0750AH"},
+              {"name": "رضی_الدین_طاووس", "folder": "0664IbnTawus", "repo": "0675AH"},
+              {"name": "یحیی_سعید_حلی", "folder": "", "repo": ""},
+              {"name": "بهجة", "folder": "", "repo": ""},
+              {"name": "سید_محمد_مجاهد", "folder": "", "repo": ""},
+              {"name": "خامنه_ای", "folder": "", "repo": ""},
           ]
           
-          results = {}
+          OUTPUT_DIR = "shamela_downloads"
+          os.makedirs(OUTPUT_DIR, exist_ok=True)
           
           for author in AUTHORS:
               name = author['name']
-              query = author['query']
+              folder = author['folder']
+              repo = author['repo']
               
-              print(f"\n🔍 جستجوی: {name}")
-              print(f"   عبارت: {query}")
+              print(f"\n{'='*60}")
+              print(f"🔍 {name}")
+              print(f"{'='*60}")
               
-              try:
-                  # جستجو در archive.org
-                  url = f"https://archive.org/advancedsearch.php?q={urllib.parse.quote(query)}+AND+mediatype:texts&fl[]=identifier,title,creator,year&output=json&rows=10"
-                  
-                  req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-                  response = urllib.request.urlopen(req, timeout=30)
-                  data = json.loads(response.read())
-                  
-                  docs = data.get('response', {}).get('docs', [])
-                  
-                  author_results = []
-                  for doc in docs[:10]:
-                      author_results.append({
-                          "title": doc.get('title', 'N/A'),
-                          "creator": doc.get('creator', 'N/A'),
-                          "year": doc.get('year', 'N/A'),
-                          "identifier": doc.get('identifier', 'N/A'),
-                          "url": f"https://archive.org/details/{doc.get('identifier', '')}"
-                      })
-                      print(f"   📚 {doc.get('title', 'N/A')[:80]}")
-                      print(f"      {doc.get('identifier', 'N/A')}")
-                  
-                  results[name] = {
-                      "query": query,
-                      "total_found": data.get('response', {}).get('numFound', 0),
-                      "books": author_results
-                  }
-                  
-                  print(f"   📊 تعداد: {len(author_results)}")
-                  
-              except Exception as e:
-                  print(f"   ❌ خطا: {e}")
-                  results[name] = {"error": str(e)}
+              if not folder or not repo:
+                  print("   ⚠️ پوشه/مخزن نامشخص - رد می‌شود")
+                  continue
               
-              time.sleep(1)  # احترام به سرور
-          
-          with open("archive_results.json", "w", encoding="utf-8") as f:
-              json.dump(results, f, ensure_ascii=False, indent=2)
-          
-          print(f"\n{'='*70}")
-          print("📊 جمع‌بندی:")
-          for name, data in results.items():
-              if 'error' in data:
-                  print(f"   ❌ {name}: خطا")
+              # کلون مخزن
+              repo_dir = f"repo_{repo}"
+              if not os.path.exists(repo_dir):
+                  print(f"   📥 کلون {repo}...")
+                  result = subprocess.run(
+                      ["git", "clone", "--depth", "1", f"https://github.com/OpenITI/{repo}.git", repo_dir],
+                      capture_output=True, text=True
+                  )
+                  if result.returncode != 0:
+                      print("   ❌ کلون ناموفق")
+                      continue
+              
+              folder_path = os.path.join(repo_dir, "data", folder)
+              if not os.path.exists(folder_path):
+                  print(f"   ❌ پوشه {folder} یافت نشد")
+                  continue
+              
+              # جستجوی لینک شامله
+              shamela_ids = set()
+              for root, _, files in os.walk(folder_path):
+                  for file in files:
+                      if file.endswith('.yml'):
+                          file_path = os.path.join(root, file)
+                          try:
+                              with open(file_path, 'r', encoding='utf-8') as f:
+                                  content = f.read()
+                                  # جستجوی Shamela_xxxxxx
+                                  ids = re.findall(r'Shamela_(\d+)', content)
+                                  for sid in ids:
+                                      shamela_ids.add(sid)
+                                  
+                                  # جستجوی shamela.ws URL
+                                  urls = re.findall(r'https?://shamela\.ws/[^\s\n]+', content)
+                                  for url in urls:
+                                      print(f"   🔗 {url}")
+                          except:
+                              pass
+              
+              if shamela_ids:
+                  print(f"   📚 شناسه‌های شامله: {shamela_ids}")
+                  
+                  # دانلود از شامله
+                  for sid in list(shamela_ids)[:3]:  # حداکثر ۳ کتاب
+                      try:
+                          epub_url = f"https://shamela.ws/book/{sid}/epub"
+                          print(f"   📥 دانلود: {epub_url}")
+                          
+                          response = requests.get(epub_url, headers={
+                              'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36'
+                          }, timeout=60)
+                          
+                          if response.status_code == 200 and len(response.content) > 10000:
+                              filename = f"{name}_{sid}.epub"
+                              filepath = os.path.join(OUTPUT_DIR, filename)
+                              with open(filepath, 'wb') as f:
+                                  f.write(response.content)
+                              print(f"   ✅ ذخیره شد: {filename} ({len(response.content):,} bytes)")
+                          else:
+                              print(f"   ❌ خطا: {response.status_code}")
+                          
+                          time.sleep(2)
+                      except Exception as e:
+                          print(f"   ❌ خطا: {e}")
               else:
-                  print(f"   {name}: {data['total_found']} نتیجه")
+                  print("   ❌ شناسه شامله یافت نشد")
+          
+          # فهرست نهایی
+          print(f"\n{'='*60}")
+          print("📊 فایل‌های دانلود شده:")
+          for f in sorted(os.listdir(OUTPUT_DIR)):
+              size = os.path.getsize(os.path.join(OUTPUT_DIR, f))
+              print(f"   📄 {f} ({size:,} bytes)")
       
-      - name: Upload Results
+      - name: Upload Downloads
         uses: actions/upload-artifact@v4
         with:
-          name: archive-search-results
-          path: archive_results.json
+          name: shamela-epub-downloads
+          path: shamela_downloads/
           retention-days: 7
+          compression-level: 6
