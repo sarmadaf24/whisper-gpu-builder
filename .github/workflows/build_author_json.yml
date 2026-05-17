@@ -1,12 +1,12 @@
-name: DIRECT SHAMELA SEARCH
+name: SCAN - 18 Hanafi Authors
 
 on:
   workflow_dispatch:
 
 jobs:
-  search-shamela:
+  scan:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 90
     
     steps:
       - name: Setup Python
@@ -14,109 +14,97 @@ jobs:
         with:
           python-version: '3.11'
       
-      - name: Install deps
-        run: pip install requests
-      
-      - name: Search Shamela Directly
+      - name: SCAN ALL 18
         shell: python
         run: |
-          import requests, json, time, urllib.parse
+          import os, json, subprocess
           
           AUTHORS = [
-              {"name": "جابر_جعفی", "query": "جابر بن يزيد الجعفي"},
-              {"name": "فضل_شاذان", "query": "فضل بن شاذان"},
-              {"name": "قطب_راوندی", "query": "قطب الدين الراوندي"},
-              {"name": "مامقانی", "query": "عبد الله المامقاني"},
-              {"name": "شوشتری", "query": "محمد تقي التستري"},
-              {"name": "حسن_سلیمان_حلی", "query": "الحسن بن سليمان الحلي"},
-              {"name": "فخر_المحققین", "query": "فخر المحققين"},
-              {"name": "رضی_الدین_طاووس", "query": "رضي الدين علي بن طاووس"},
-              {"name": "یحیی_سعید_حلی", "query": "يحيى بن سعيد الحلي"},
-              {"name": "بهجة", "query": "محمد تقي بهجت"},
-              {"name": "سید_محمد_مجاهد", "query": "محمد المجاهد الطباطبائي"},
-              {"name": "خامنه_ای", "query": "علي الخامنئي"},
+              {"name": "ابوحنیفه", "patterns": ["AbuHanifa", "ابوحنیفه", "حنيفة", "Hanifa", "فقه_اکبر", "Musnad"]},
+              {"name": "ابویوسف", "patterns": ["AbuYusuf", "ابویوسف", "QadiYusuf", "خراج", "Kharaj"]},
+              {"name": "شیبانی", "patterns": ["Shaybani", "شیباني", "Mabsut", "مبسوط", "JamicSaghir", "جامع_صغیر"]},
+              {"name": "سرخسی", "patterns": ["Sarakhsi", "سرخسي", "MabsutSarakhsi", "مبسوط_سرخسی"]},
+              {"name": "بزدوی", "patterns": ["Bazdawi", "بزدوي", "Kanz", "کنز", "UsulBazdawi"]},
+              {"name": "کاسانی", "patterns": ["Kasani", "كاساني", "Badacic", "بدایع"]},
+              {"name": "مرغینانی", "patterns": ["Marghinani", "مرغیناني", "Hidaya", "هدایه"]},
+              {"name": "زیلعی", "patterns": ["Zaylaci", "زیلعي", "Tabyin", "تبیین"]},
+              {"name": "ملاخسرو", "patterns": ["MullaKhusru", "خسرو", "Durar", "درر"]},
+              {"name": "ابن_عابدین", "patterns": ["IbnCabidin", "عابدین", "Hashiya", "حاشیه", "RaddMuhtar"]},
+              {"name": "قاضی_خان", "patterns": ["QadiKhan", "قاضي_خان", "Fatawa", "فتاوی"]},
+              {"name": "شاشی", "patterns": ["Shashi", "شاشي", "UsulShashi", "اصول_شاشی"]},
+              {"name": "والوالجی", "patterns": ["Walwaliji", "والوالجي", "Fatawa"]},
+              {"name": "ظهیرالدین_بخاری", "patterns": ["ZahirDinBukhari", "ظهیر", "Bukhari", "فتاوی_ظهیریه"]},
+              {"name": "ابن_نجیم", "patterns": ["IbnNujaym", "نجیم", "BahrRaciq", "بحر_رایق", "Ashbah"]},
+              {"name": "خوارزمی", "patterns": ["Khawarizmi", "خوارزمي", "Mafatih"]},
+              {"name": "جمال_الدین_زیلعی", "patterns": ["JamalDinZaylaci", "جمال", "زیلعي", "NasbRaya", "نصب_رایه"]},
+              {"name": "حصکفی", "patterns": ["Haskafi", "حصکفي", "DurrMukhtar", "در_مختار"]},
           ]
           
-          results = {}
+          REPOS = [f"{c:04d}AH" for c in range(100, 1400, 25)]
           
+          final_results = {a["name"]: [] for a in AUTHORS}
+          
+          for repo_name in REPOS:
+              repo_url = f"https://github.com/OpenITI/{repo_name}.git"
+              repo_dir = f"repo_{repo_name}"
+              
+              print(f"📦 {repo_name}...", end=" ")
+              
+              if not os.path.exists(repo_dir):
+                  result = subprocess.run(["git", "clone", "--depth", "1", repo_url, repo_dir], 
+                                         capture_output=True, text=True)
+                  if result.returncode != 0:
+                      print("❌")
+                      continue
+              
+              data_dir = os.path.join(repo_dir, "data")
+              if not os.path.exists(data_dir):
+                  print("∅")
+                  continue
+              
+              folders = [f for f in os.listdir(data_dir) if os.path.isdir(os.path.join(data_dir, f))]
+              found_any = False
+              
+              for author in AUTHORS:
+                  for folder in folders:
+                      folder_lower = folder.lower()
+                      for pat in author["patterns"]:
+                          if pat.lower() in folder_lower:
+                              folder_path = os.path.join(data_dir, folder)
+                              total_size = sum(os.path.getsize(os.path.join(r,f)) 
+                                             for r,_,fs in os.walk(folder_path) for f in fs)
+                              
+                              existing = [f["folder"] for f in final_results[author["name"]]]
+                              if folder not in existing:
+                                  final_results[author["name"]].append({
+                                      "repo": repo_name,
+                                      "folder": folder,
+                                      "size_mb": round(total_size/(1024*1024), 2)
+                                  })
+                                  found_any = True
+                                  print(f"\n      🎯 {author['name']}: {folder} ({round(total_size/(1024*1024),1)} MB)")
+                              break
+              
+              if not found_any:
+                  print(".", end="")
+                  subprocess.run(["rm", "-rf", repo_dir], check=False)
+          
+          print(f"\n\n{'='*70}")
+          print("📊 نتایج:")
           for author in AUTHORS:
-              name = author['name']
-              query = author['query']
-              
-              print(f"\n{'='*60}")
-              print(f"🔍 {name}: {query}")
-              print(f"{'='*60}")
-              
-              try:
-                  # جستجو در شامله
-                  search_url = f"https://shamela.ws/search?q={urllib.parse.quote(query)}"
-                  print(f"   🌐 {search_url}")
-                  
-                  headers = {
-                      'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                      'Accept': 'text/html,application/xhtml+xml',
-                      'Accept-Language': 'ar,en;q=0.9',
-                  }
-                  
-                  response = requests.get(search_url, headers=headers, timeout=30)
-                  
-                  if response.status_code == 200:
-                      html = response.text
-                      
-                      # استخراج لینک کتاب‌ها
-                      import re
-                      book_links = re.findall(r'href="(/book/(\d+)[^"]*)"[^>]*>([^<]+)', html)
-                      
-                      author_books = []
-                      seen_ids = set()
-                      
-                      for link, book_id, title in book_links:
-                          if book_id not in seen_ids:
-                              seen_ids.add(book_id)
-                              clean_title = re.sub(r'<[^>]+>', '', title).strip()
-                              book_url = f"https://shamela.ws{link}"
-                              epub_url = f"https://shamela.ws/book/{book_id}/epub"
-                              
-                              author_books.append({
-                                  "id": book_id,
-                                  "title": clean_title[:100],
-                                  "url": book_url,
-                                  "epub_url": epub_url
-                              })
-                              
-                              print(f"   📚 [{book_id}] {clean_title[:80]}")
-                              if len(author_books) >= 5:
-                                  break
-                      
-                      results[name] = {
-                          "query": query,
-                          "total_found": len(author_books),
-                          "books": author_books
-                      }
-                  else:
-                      results[name] = {"error": f"HTTP {response.status_code}"}
-                      print(f"   ❌ خطای HTTP: {response.status_code}")
-                  
-              except Exception as e:
-                  results[name] = {"error": str(e)}
-                  print(f"   ❌ خطا: {e}")
-              
-              time.sleep(2)
+              items = final_results[author["name"]]
+              found_real = [i for i in items if i['size_mb'] > 0.5]
+              print(f"\n{author['name']}: {len(items)} پوشه ({len(found_real)} قابل قبول)")
+              for item in items:
+                  mark = "✅" if item['size_mb'] > 0.5 else "⚠️"
+                  print(f"   {mark} {item['repo']}/{item['folder']} ({item['size_mb']} MB)")
           
-          with open("shamela_search_results.json", "w", encoding="utf-8") as f:
-              json.dump(results, f, ensure_ascii=False, indent=2)
-          
-          print(f"\n{'='*60}")
-          print("📊 جمع‌بندی:")
-          for name, data in results.items():
-              if 'error' in data:
-                  print(f"   ❌ {name}: {data['error']}")
-              else:
-                  print(f"   {name}: {data['total_found']} کتاب")
+          with open("scan_hanafi.json", "w", encoding="utf-8") as f:
+              json.dump(final_results, f, ensure_ascii=False, indent=2)
       
       - name: Upload Results
         uses: actions/upload-artifact@v4
         with:
-          name: shamela-search-results
-          path: shamela_search_results.json
+          name: scan-hanafi-results
+          path: scan_hanafi.json
           retention-days: 7
