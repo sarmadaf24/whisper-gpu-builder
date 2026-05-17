@@ -1,10 +1,10 @@
-name: SCAN - 18 Hanafi Authors
+name: DEEP SCAN - 5 Missing Hanafi
 
 on:
   workflow_dispatch:
 
 jobs:
-  scan:
+  deep-scan:
     runs-on: ubuntu-latest
     timeout-minutes: 90
     
@@ -14,33 +14,20 @@ jobs:
         with:
           python-version: '3.11'
       
-      - name: SCAN ALL 18
+      - name: Deep Scan
         shell: python
         run: |
           import os, json, subprocess
           
           AUTHORS = [
-              {"name": "ابوحنیفه", "patterns": ["AbuHanifa", "ابوحنیفه", "حنيفة", "Hanifa", "فقه_اکبر", "Musnad"]},
-              {"name": "ابویوسف", "patterns": ["AbuYusuf", "ابویوسف", "QadiYusuf", "خراج", "Kharaj"]},
-              {"name": "شیبانی", "patterns": ["Shaybani", "شیباني", "Mabsut", "مبسوط", "JamicSaghir", "جامع_صغیر"]},
-              {"name": "سرخسی", "patterns": ["Sarakhsi", "سرخسي", "MabsutSarakhsi", "مبسوط_سرخسی"]},
-              {"name": "بزدوی", "patterns": ["Bazdawi", "بزدوي", "Kanz", "کنز", "UsulBazdawi"]},
-              {"name": "کاسانی", "patterns": ["Kasani", "كاساني", "Badacic", "بدایع"]},
-              {"name": "مرغینانی", "patterns": ["Marghinani", "مرغیناني", "Hidaya", "هدایه"]},
-              {"name": "زیلعی", "patterns": ["Zaylaci", "زیلعي", "Tabyin", "تبیین"]},
-              {"name": "ملاخسرو", "patterns": ["MullaKhusru", "خسرو", "Durar", "درر"]},
-              {"name": "ابن_عابدین", "patterns": ["IbnCabidin", "عابدین", "Hashiya", "حاشیه", "RaddMuhtar"]},
-              {"name": "قاضی_خان", "patterns": ["QadiKhan", "قاضي_خان", "Fatawa", "فتاوی"]},
-              {"name": "شاشی", "patterns": ["Shashi", "شاشي", "UsulShashi", "اصول_شاشی"]},
-              {"name": "والوالجی", "patterns": ["Walwaliji", "والوالجي", "Fatawa"]},
-              {"name": "ظهیرالدین_بخاری", "patterns": ["ZahirDinBukhari", "ظهیر", "Bukhari", "فتاوی_ظهیریه"]},
-              {"name": "ابن_نجیم", "patterns": ["IbnNujaym", "نجیم", "BahrRaciq", "بحر_رایق", "Ashbah"]},
-              {"name": "خوارزمی", "patterns": ["Khawarizmi", "خوارزمي", "Mafatih"]},
-              {"name": "جمال_الدین_زیلعی", "patterns": ["JamalDinZaylaci", "جمال", "زیلعي", "NasbRaya", "نصب_رایه"]},
-              {"name": "حصکفی", "patterns": ["Haskafi", "حصکفي", "DurrMukhtar", "در_مختار"]},
+              {"name": "ابوحنیفه", "patterns": ["AbuHanifa", "حنيفة", "Hanifa", "فقه_اکبر", "Musnad_AbuHanifa", "نعمان", "Nucman", "ابوحنیفه", "حنفی", "Hanafi"]},
+              {"name": "ظهیرالدین_بخاری", "patterns": ["ZahirDinBukhari", "ظهیر_بخاری", "ZahirBukhari", "فتاوی_ظهیریه", "Zahiriyya", "ظهیریه", "ZahirDinMuhammadBukhari"]},
+              {"name": "ملاخسرو", "patterns": ["MullaKhusru", "ملاخسرو", "Khusru", "خسرو", "DurarHukkam", "درر_حکام", "GhurarAhkam", "غرر_احکام", "MuhammadKhusru"]},
+              {"name": "والوالجی", "patterns": ["Walwaliji", "والوالجي", "Walwalij", "فتاوی_والوالجیه", "ZahirDinWalwaliji", "Walwalijiyya"]},
+              {"name": "خوارزمی", "patterns": ["Khawarizmi", "خوارزمي", "Khwarizmi", "MafatihCulum", "مفاتیح_علوم", "AbuBakrKhawarizmi", "ابوبکر_خوارزمي"]},
           ]
           
-          REPOS = [f"{c:04d}AH" for c in range(100, 1400, 25)]
+          REPOS = [f"{c:04d}AH" for c in range(0, 1500, 25)]
           
           final_results = {a["name"]: [] for a in AUTHORS}
           
@@ -93,18 +80,18 @@ jobs:
           print("📊 نتایج:")
           for author in AUTHORS:
               items = final_results[author["name"]]
-              found_real = [i for i in items if i['size_mb'] > 0.5]
+              found_real = [i for i in items if i['size_mb'] > 0.3]
               print(f"\n{author['name']}: {len(items)} پوشه ({len(found_real)} قابل قبول)")
               for item in items:
-                  mark = "✅" if item['size_mb'] > 0.5 else "⚠️"
+                  mark = "✅" if item['size_mb'] > 0.3 else "⚠️"
                   print(f"   {mark} {item['repo']}/{item['folder']} ({item['size_mb']} MB)")
           
-          with open("scan_hanafi.json", "w", encoding="utf-8") as f:
+          with open("deep_hanafi_5.json", "w", encoding="utf-8") as f:
               json.dump(final_results, f, ensure_ascii=False, indent=2)
       
       - name: Upload Results
         uses: actions/upload-artifact@v4
         with:
-          name: scan-hanafi-results
-          path: scan_hanafi.json
+          name: deep-hanafi-5-results
+          path: deep_hanafi_5.json
           retention-days: 7
