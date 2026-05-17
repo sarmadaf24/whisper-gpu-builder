@@ -1,176 +1,98 @@
-name: FINAL EXTRACT - 10 Found Authors
+name: SEARCH - 12 Missing in Archive.org
 
 on:
   workflow_dispatch:
 
 jobs:
-  extract-all:
+  search-archive:
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 30
     
     steps:
-      - name: Setup Python & Deps
+      - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
       
-      - name: Install PyYAML
-        run: pip install pyyaml
-      
-      - name: EXTRACT ALL 10 AUTHORS
+      - name: Search Archive.org
         shell: python
         run: |
-          import os, json, subprocess, re
+          import json, urllib.request, urllib.parse, time
           
           AUTHORS = [
-              {"name": "ابن_ادریس_حلی", "folder": "0598IbnIdrisHilli", "repo": "0600AH", "title_ar": "ابن إدريس الحلي"},
-              {"name": "محقق_کرکی", "folder": "0940IbnHusaynMuhaqqiqThaniKaraki", "repo": "0950AH", "title_ar": "المحقق الكركي"},
-              {"name": "ملا_احمد_نراقی", "folder": "1244AhmadNaraqi", "repo": "1250AH", "title_ar": "الملا أحمد النراقي"},
-              {"name": "سید_جواد_عاملی", "folder": "1226MuhammadJawadCamili", "repo": "1250AH", "title_ar": "السيد جواد العاملي"},
-              {"name": "سید_حسین_بروجردی", "folder": "1313SayyidCaliBurujirdi", "repo": "1325AH", "title_ar": "السيد حسين البروجردي"},
-              {"name": "امام_خمینی", "folder": "1409RuhAllahKhumayni", "repo": "1425AH", "title_ar": "الإمام الخميني"},
-              {"name": "بحرالعلوم", "folder": "1225BahrCulum", "repo": "1225AH", "title_ar": "السيد بحر العلوم"},
-              {"name": "ابن_ابی_عقیل", "folder": "0275AbuHawariCumani", "repo": "0275AH", "title_ar": "ابن أبي عقيل العماني"},
-              {"name": "ابن_جنید", "folder": "0220AbuJacfarIskafi", "repo": "0225AH", "title_ar": "ابن الجنيد الإسكافي"},
-              {"name": "سید_ابوالقاسم_خویی", "folder": "1413TajDinKhui", "repo": "1425AH", "title_ar": "السيد أبو القاسم الخوئي"},
+              {"name": "جابر_جعفی", "query": "جابر بن يزيد الجعفي"},
+              {"name": "فضل_شاذان", "query": "فضل بن شاذان النيسابوري"},
+              {"name": "قطب_راوندی", "query": "قطب الدين الراوندي"},
+              {"name": "سید_محمد_مجاهد", "query": "السيد محمد المجاهد الطباطبائي"},
+              {"name": "مامقانی", "query": "عبد الله المامقاني"},
+              {"name": "شوشتری", "query": "محمد تقي التستري"},
+              {"name": "بهجة", "query": "محمد تقي بهجت"},
+              {"name": "حسن_سلیمان_حلی", "query": "الحسن بن سليمان الحلي"},
+              {"name": "فخر_المحققین", "query": "فخر المحققين الحلي"},
+              {"name": "رضی_الدین_طاووس", "query": "رضي الدين علي بن طاووس"},
+              {"name": "یحیی_سعید_حلی", "query": "يحيى بن سعيد الحلي"},
+              {"name": "خامنه_ای", "query": "علي الحسيني الخامنئي"},
           ]
           
-          cloned_repos = {}
-          FINAL_DIR = "final_package"
-          os.makedirs(FINAL_DIR, exist_ok=True)
+          results = {}
           
-          def clean_text(raw_text):
-              lines = raw_text.split('\n')
-              clean_lines = []
-              for line in lines:
-                  if re.match(r'^#META#', line.strip()): continue
-                  if line.strip() == '#META#Header#End#': continue
-                  if re.match(r'^PageV', line.strip()): continue
-                  if re.match(r'^ms\d+$', line.strip()): continue
-                  if '~~' in line: line = line.replace('~~', '')
-                  if line.startswith('### |') or line.startswith('### ||'): continue
-                  if line.startswith('# '): line = line[2:]
-                  elif line.startswith('## '): line = line[3:]
-                  elif line.startswith('### '): line = line[4:]
-                  clean_lines.append(line)
+          for author in AUTHORS:
+              name = author['name']
+              query = author['query']
               
-              result = []
-              prev_empty = False
-              for line in clean_lines:
-                  is_empty = not line.strip()
-                  if is_empty and prev_empty: continue
-                  result.append(line)
-                  prev_empty = is_empty
-              return '\n'.join(result).strip()
-          
-          ALL_SUMMARY = []
-          
-          for idx, author in enumerate(AUTHORS, 1):
-              author_name = author['name']
-              folder_name = author['folder']
-              repo_name = author['repo']
-              title_ar = author['title_ar']
+              print(f"\n🔍 جستجوی: {name}")
+              print(f"   عبارت: {query}")
               
-              print(f"\n{'#'*70}")
-              print(f"📚 [{idx}/{len(AUTHORS)}] {title_ar}")
-              print(f"{'#'*70}")
-              
-              author_dir = os.path.join(FINAL_DIR, author_name)
-              os.makedirs(author_dir, exist_ok=True)
-              
-              if repo_name not in cloned_repos:
-                  repo_dir = f"repo_{repo_name}"
-                  if not os.path.exists(repo_dir):
-                      print(f"📥 کلون {repo_name}...")
-                      subprocess.run(["git", "clone", "--depth", "1", 
-                                      f"https://github.com/OpenITI/{repo_name}.git", repo_dir], 
-                                     check=True, capture_output=True)
-                  cloned_repos[repo_name] = repo_dir
-              
-              repo_dir = cloned_repos[repo_name]
-              folder_path = os.path.join(repo_dir, "data", folder_name)
-              
-              if not os.path.exists(folder_path):
-                  print(f"❌ پوشه یافت نشد: {folder_path}")
-                  continue
-              
-              books_extracted = []
-              
-              for root, dirs, files in os.walk(folder_path):
-                  for file in sorted(files):
-                      file_path = os.path.join(root, file)
-                      try: size = os.path.getsize(file_path)
-                      except: continue
-                      
-                      if size < 50000: continue
-                      if file.endswith(('.yml', '.md')): continue
-                      
-                      try:
-                          with open(file_path, 'r', encoding='utf-8') as f:
-                              raw_text = f.read()
-                      except: continue
-                      
-                      meta = {}
-                      for key, pattern in {
-                          'title': r'#META#\s+020\.BookTITLE\s+::\s+(.+)',
-                          'author': r'#META#\s+010\.AuthorNAME\s+::\s+(.+)',
-                          'subject': r'#META#\s+021\.BookSUBJ\s+::\s+(.+)',
-                          'volumes': r'#META#\s+022\.BookVOLS\s+::\s+(.+)',
-                          'editor': r'#META#\s+040\.EdEDITOR\s+::\s+(.+)',
-                          'publisher': r'#META#\s+043\.EdPUBLISHER\s+::\s+(.+)',
-                      }.items():
-                          m = re.search(pattern, raw_text)
-                          if m and m.group(1).strip() not in ['NODATA', 'NOTGIVEN', '']:
-                              meta[key] = m.group(1).strip()
-                      
-                      title = meta.get('title', file.replace(folder_name+'.', ''))
-                      clean = clean_text(raw_text)
-                      
-                      safe_name = re.sub(r'[^\w\-_]', '_', title)[:60]
-                      txt_path = os.path.join(author_dir, f"{safe_name}.txt")
-                      
-                      with open(txt_path, 'w', encoding='utf-8') as f:
-                          f.write(f"العنوان: {title}\n")
-                          if 'author' in meta: f.write(f"المؤلف: {meta['author']}\n")
-                          if 'subject' in meta: f.write(f"الموضوع: {meta['subject']}\n")
-                          f.write("="*70 + "\n\n")
-                          f.write(clean)
-                      
-                      books_extracted.append({
-                          "title": title,
-                          "file": file,
-                          "size_mb": round(size/(1024*1024), 2),
-                          "text_length": len(clean),
-                          "metadata": meta
+              try:
+                  # جستجو در archive.org
+                  url = f"https://archive.org/advancedsearch.php?q={urllib.parse.quote(query)}+AND+mediatype:texts&fl[]=identifier,title,creator,year&output=json&rows=10"
+                  
+                  req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+                  response = urllib.request.urlopen(req, timeout=30)
+                  data = json.loads(response.read())
+                  
+                  docs = data.get('response', {}).get('docs', [])
+                  
+                  author_results = []
+                  for doc in docs[:10]:
+                      author_results.append({
+                          "title": doc.get('title', 'N/A'),
+                          "creator": doc.get('creator', 'N/A'),
+                          "year": doc.get('year', 'N/A'),
+                          "identifier": doc.get('identifier', 'N/A'),
+                          "url": f"https://archive.org/details/{doc.get('identifier', '')}"
                       })
-                      
-                      print(f"   ✅ {title} ({round(size/(1024*1024),1)} MB | {len(clean):,} chars)")
+                      print(f"   📚 {doc.get('title', 'N/A')[:80]}")
+                      print(f"      {doc.get('identifier', 'N/A')}")
+                  
+                  results[name] = {
+                      "query": query,
+                      "total_found": data.get('response', {}).get('numFound', 0),
+                      "books": author_results
+                  }
+                  
+                  print(f"   📊 تعداد: {len(author_results)}")
+                  
+              except Exception as e:
+                  print(f"   ❌ خطا: {e}")
+                  results[name] = {"error": str(e)}
               
-              author_json = {
-                  "author": title_ar,
-                  "folder": author_name,
-                  "repo": repo_name,
-                  "total_books": len(books_extracted),
-                  "books": books_extracted
-              }
-              
-              with open(os.path.join(author_dir, "metadata.json"), 'w', encoding='utf-8') as f:
-                  json.dump(author_json, f, ensure_ascii=False, indent=2)
-              
-              ALL_SUMMARY.append({"author": title_ar, "folder": author_name, "total_books": len(books_extracted)})
-              print(f"   📊 مجموع: {len(books_extracted)} کتاب")
+              time.sleep(1)  # احترام به سرور
           
-          with open(os.path.join(FINAL_DIR, "00_INDEX.json"), 'w', encoding='utf-8') as f:
-              json.dump({"total_authors": len(ALL_SUMMARY), "authors": ALL_SUMMARY}, f, ensure_ascii=False, indent=2)
+          with open("archive_results.json", "w", encoding="utf-8") as f:
+              json.dump(results, f, ensure_ascii=False, indent=2)
           
           print(f"\n{'='*70}")
-          print(f"🎉 تمام! {len(ALL_SUMMARY)} نویسنده پردازش شد")
-          print(f"📁 خروجی: {FINAL_DIR}/")
+          print("📊 جمع‌بندی:")
+          for name, data in results.items():
+              if 'error' in data:
+                  print(f"   ❌ {name}: خطا")
+              else:
+                  print(f"   {name}: {data['total_found']} نتیجه")
       
-      - name: Upload Final Package
+      - name: Upload Results
         uses: actions/upload-artifact@v4
         with:
-          name: ALL-10-AUTHORS-FINAL
-          path: final_package/
+          name: archive-search-results
+          path: archive_results.json
           retention-days: 7
-          compression-level: 6
