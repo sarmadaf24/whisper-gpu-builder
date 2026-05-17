@@ -1,108 +1,177 @@
-name: SCAN - 16 Maliki Authors
+name: FINAL EXTRACT - 14 Maliki Authors
 
 on:
   workflow_dispatch:
 
 jobs:
-  scan:
+  extract-all:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 360
     
     steps:
-      - name: Setup Python
+      - name: Setup Python & Deps
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
       
-      - name: SCAN ALL 16
+      - name: Install PyYAML
+        run: pip install pyyaml
+      
+      - name: EXTRACT ALL 14 MALIKI AUTHORS
         shell: python
         run: |
-          import os, json, subprocess
+          import os, json, subprocess, re
           
           AUTHORS = [
-              {"name": "امام_مالک", "patterns": ["MalikIbnAnas", "مالك", "Muwatta", "موطأ", "MalikAnas"]},
-              {"name": "ابن_قاسم", "patterns": ["IbnQasim", "ابن_قاسم", "CabdRahmanQasim", "Mudawwana", "مدونه"]},
-              {"name": "سحنون", "patterns": ["Sahnun", "سحنون", "Tanukhi", "تنوخي"]},
-              {"name": "ابن_ابی_زید", "patterns": ["IbnAbiZayd", "ابن_ابي_زید", "Qayrawani", "قیرواني", "Risala"]},
-              {"name": "ابن_رشد_جد", "patterns": ["IbnRushdJadd", "ابن_رشد", "RushdJadd", "BayanTahsil", "مقدمات"]},
-              {"name": "ابن_رشد_حفید", "patterns": ["IbnRushdHafid", "RushdHafid", "BidayatMujtahid", "بدایه_مجتهد"]},
-              {"name": "قرطبی", "patterns": ["Qurtubi", "قرطبي", "TafsirQurtubi", "تفسیر_قرطبي"]},
-              {"name": "ابن_حاجب", "patterns": ["IbnHajib", "حاجب", "MukhtasarIbnHajib", "مختصر_حاجب"]},
-              {"name": "قرافی", "patterns": ["Qarafi", "قرافي", "ShihabDinQarafi", "Furuq", "فروق", "Dhakira"]},
-              {"name": "ابن_عرفه", "patterns": ["IbnCarafa", "عرفه", "MukhtasarIbnCarafa"]},
-              {"name": "خلیل_اسحاق", "patterns": ["KhalilIbnIshaq", "خلیل", "MukhtasarKhalil", "مختصر_خلیل"]},
-              {"name": "ابن_ابی_حجله", "patterns": ["IbnAbiHajala", "حجله", "Diwan"]},
-              {"name": "میاره", "patterns": ["Mayyara", "میاره", "SharhMayyara", "شرح_میاره"]},
-              {"name": "دردیر", "patterns": ["Dardir", "دردیر", "SharhSaghir", "شرح_صغیر"]},
-              {"name": "صاوی", "patterns": ["Sawi", "صاوي", "HashiyaSawi", "حاشیه_صاوي"]},
-              {"name": "زرقانی", "patterns": ["Zarqani", "زرقاني", "SharhMuwatta", "شرح_موطأ"]},
+              {"name": "امام_مالک", "folder": "0179MalikIbnAnas", "repo": "0200AH", "title_ar": "الإمام مالك بن أنس"},
+              {"name": "سحنون", "folder": "0240SahnunIbnSacid", "repo": "0250AH", "title_ar": "سحنون التنوخي"},
+              {"name": "ابن_ابی_زید", "folder": "0386IbnAbiZaydQayrawani", "repo": "0400AH", "title_ar": "ابن أبي زيد القيرواني"},
+              {"name": "ابن_رشد_جد", "folder": "0520IbnRushdJadd", "repo": "0525AH", "title_ar": "ابن رشد الجد"},
+              {"name": "ابن_رشد_حفید", "folder": "0595IbnRushdHafid", "repo": "0600AH", "title_ar": "ابن رشد الحفيد"},
+              {"name": "قرطبی", "folder": "0671AbuCabdAllahQurtubi", "repo": "0675AH", "title_ar": "شمس الدين القرطبي"},
+              {"name": "ابن_حاجب", "folder": "0646IbnCumarIbnHajibKurdi", "repo": "0650AH", "title_ar": "جمال الدين ابن الحاجب"},
+              {"name": "قرافی", "folder": "0684ShihabDinQarafi", "repo": "0700AH", "title_ar": "شهاب الدين القرافي"},
+              {"name": "ابن_عرفه", "folder": "0803IbnCarafaWarghami", "repo": "0825AH", "title_ar": "ابن عرفة المالكي"},
+              {"name": "خلیل_اسحاق", "folder": "0767KhalilIbnIshaq", "repo": "0775AH", "title_ar": "خليل بن إسحاق الجندي"},
+              {"name": "ابن_ابی_حجله", "folder": "0776IbnAbiHajala", "repo": "0800AH", "title_ar": "ابن أبي حجلة"},
+              {"name": "میاره", "folder": "1072IbnAhmadMayyaraFasi", "repo": "1075AH", "title_ar": "محمد ميارة الفاسي"},
+              {"name": "دردیر", "folder": "1201AhmadDardirAbuBarakat", "repo": "1225AH", "title_ar": "أحمد الدردير"},
+              {"name": "صاوی", "folder": "1241IbnMuhammadKhalwatiSawi", "repo": "1250AH", "title_ar": "أحمد الصاوي المالكي"},
           ]
           
-          REPOS = [f"{c:04d}AH" for c in range(100, 1400, 25)]
+          cloned_repos = {}
+          FINAL_DIR = "final_package"
+          os.makedirs(FINAL_DIR, exist_ok=True)
           
-          final_results = {a["name"]: [] for a in AUTHORS}
+          def clean_text(raw_text):
+              lines = raw_text.split('\n')
+              clean_lines = []
+              for line in lines:
+                  if re.match(r'^#META#', line.strip()): continue
+                  if line.strip() == '#META#Header#End#': continue
+                  if re.match(r'^PageV', line.strip()): continue
+                  if re.match(r'^ms\d+$', line.strip()): continue
+                  if '~~' in line: line = line.replace('~~', '')
+                  if line.startswith('### |') or line.startswith('### ||'): continue
+                  if line.startswith('# '): line = line[2:]
+                  elif line.startswith('## '): line = line[3:]
+                  elif line.startswith('### '): line = line[4:]
+                  clean_lines.append(line)
+              
+              result = []
+              prev_empty = False
+              for line in clean_lines:
+                  is_empty = not line.strip()
+                  if is_empty and prev_empty: continue
+                  result.append(line)
+                  prev_empty = is_empty
+              return '\n'.join(result).strip()
           
-          for repo_name in REPOS:
-              repo_url = f"https://github.com/OpenITI/{repo_name}.git"
-              repo_dir = f"repo_{repo_name}"
+          ALL_SUMMARY = []
+          
+          for idx, author in enumerate(AUTHORS, 1):
+              author_name = author['name']
+              folder_name = author['folder']
+              repo_name = author['repo']
+              title_ar = author['title_ar']
               
-              print(f"📦 {repo_name}...", end=" ")
+              print(f"\n{'#'*70}")
+              print(f"📚 [{idx}/{len(AUTHORS)}] {title_ar}")
+              print(f"{'#'*70}")
               
-              if not os.path.exists(repo_dir):
-                  result = subprocess.run(["git", "clone", "--depth", "1", repo_url, repo_dir], 
-                                         capture_output=True, text=True)
-                  if result.returncode != 0:
-                      print("❌")
-                      continue
+              author_dir = os.path.join(FINAL_DIR, author_name)
+              os.makedirs(author_dir, exist_ok=True)
               
-              data_dir = os.path.join(repo_dir, "data")
-              if not os.path.exists(data_dir):
-                  print("∅")
+              if repo_name not in cloned_repos:
+                  repo_dir = f"repo_{repo_name}"
+                  if not os.path.exists(repo_dir):
+                      print(f"📥 کلون {repo_name}...")
+                      subprocess.run(["git", "clone", "--depth", "1", 
+                                      f"https://github.com/OpenITI/{repo_name}.git", repo_dir], 
+                                     check=True, capture_output=True)
+                  cloned_repos[repo_name] = repo_dir
+              
+              repo_dir = cloned_repos[repo_name]
+              folder_path = os.path.join(repo_dir, "data", folder_name)
+              
+              if not os.path.exists(folder_path):
+                  print(f"❌ پوشه یافت نشد")
                   continue
               
-              folders = [f for f in os.listdir(data_dir) if os.path.isdir(os.path.join(data_dir, f))]
-              found_any = False
+              books_extracted = []
               
-              for author in AUTHORS:
-                  for folder in folders:
-                      folder_lower = folder.lower()
-                      for pat in author["patterns"]:
-                          if pat.lower() in folder_lower:
-                              folder_path = os.path.join(data_dir, folder)
-                              total_size = sum(os.path.getsize(os.path.join(r,f)) 
-                                             for r,_,fs in os.walk(folder_path) for f in fs)
-                              
-                              existing = [f["folder"] for f in final_results[author["name"]]]
-                              if folder not in existing:
-                                  final_results[author["name"]].append({
-                                      "repo": repo_name,
-                                      "folder": folder,
-                                      "size_mb": round(total_size/(1024*1024), 2)
-                                  })
-                                  found_any = True
-                                  print(f"\n      🎯 {author['name']}: {folder} ({round(total_size/(1024*1024),1)} MB)")
-                              break
+              for root, dirs, files in os.walk(folder_path):
+                  for file in sorted(files):
+                      file_path = os.path.join(root, file)
+                      try: size = os.path.getsize(file_path)
+                      except: continue
+                      
+                      if size < 50000: continue
+                      if file.endswith(('.yml', '.md')): continue
+                      
+                      try:
+                          with open(file_path, 'r', encoding='utf-8') as f:
+                              raw_text = f.read()
+                      except: continue
+                      
+                      meta = {}
+                      for key, pattern in {
+                          'title': r'#META#\s+020\.BookTITLE\s+::\s+(.+)',
+                          'author': r'#META#\s+010\.AuthorNAME\s+::\s+(.+)',
+                          'subject': r'#META#\s+021\.BookSUBJ\s+::\s+(.+)',
+                          'volumes': r'#META#\s+022\.BookVOLS\s+::\s+(.+)',
+                          'editor': r'#META#\s+040\.EdEDITOR\s+::\s+(.+)',
+                          'publisher': r'#META#\s+043\.EdPUBLISHER\s+::\s+(.+)',
+                      }.items():
+                          m = re.search(pattern, raw_text)
+                          if m and m.group(1).strip() not in ['NODATA', 'NOTGIVEN', '']:
+                              meta[key] = m.group(1).strip()
+                      
+                      title = meta.get('title', file.replace(folder_name+'.', ''))
+                      clean = clean_text(raw_text)
+                      
+                      safe_name = re.sub(r'[^\w\-_]', '_', title)[:60]
+                      txt_path = os.path.join(author_dir, f"{safe_name}.txt")
+                      
+                      with open(txt_path, 'w', encoding='utf-8') as f:
+                          f.write(f"العنوان: {title}\n")
+                          if 'author' in meta: f.write(f"المؤلف: {meta['author']}\n")
+                          if 'subject' in meta: f.write(f"الموضوع: {meta['subject']}\n")
+                          f.write("="*70 + "\n\n")
+                          f.write(clean)
+                      
+                      books_extracted.append({
+                          "title": title,
+                          "file": file,
+                          "size_mb": round(size/(1024*1024), 2),
+                          "text_length": len(clean),
+                          "metadata": meta
+                      })
+                      
+                      print(f"   ✅ {title} ({round(size/(1024*1024),1)} MB | {len(clean):,} chars)")
               
-              if not found_any:
-                  print(".", end="")
-                  subprocess.run(["rm", "-rf", repo_dir], check=False)
+              author_json = {
+                  "author": title_ar,
+                  "total_books": len(books_extracted),
+                  "books": books_extracted
+              }
+              
+              with open(os.path.join(author_dir, "metadata.json"), 'w', encoding='utf-8') as f:
+                  json.dump(author_json, f, ensure_ascii=False, indent=2)
+              
+              ALL_SUMMARY.append({"author": title_ar, "total_books": len(books_extracted)})
+              print(f"   📊 مجموع: {len(books_extracted)} کتاب")
           
-          print(f"\n\n{'='*70}")
-          print("📊 نتایج:")
-          for author in AUTHORS:
-              items = final_results[author["name"]]
-              found_real = [i for i in items if i['size_mb'] > 0.5]
-              print(f"\n{author['name']}: {len(items)} پوشه ({len(found_real)} قابل قبول)")
-              for item in items:
-                  mark = "✅" if item['size_mb'] > 0.5 else "⚠️"
-                  print(f"   {mark} {item['repo']}/{item['folder']} ({item['size_mb']} MB)")
+          with open(os.path.join(FINAL_DIR, "00_INDEX.json"), 'w', encoding='utf-8') as f:
+              json.dump({"total_authors": len(ALL_SUMMARY), "authors": ALL_SUMMARY}, f, ensure_ascii=False, indent=2)
           
-          with open("scan_maliki.json", "w", encoding="utf-8") as f:
-              json.dump(final_results, f, ensure_ascii=False, indent=2)
+          print(f"\n{'='*70}")
+          print(f"🎉 تمام! {len(ALL_SUMMARY)} نویسنده پردازش شد")
       
-      - name: Upload Results
+      - name: Upload Final Package
         uses: actions/upload-artifact@v4
         with:
-          name: scan-maliki-results
-          path: scan_maliki.json
+          name: ALL-14-MALIKI-FINAL
+          path: final_package/
           retention-days: 7
+          compression-level: 6
