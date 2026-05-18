@@ -1,4 +1,4 @@
-name: FINAL DEEP SCAN & EXTRACT - 38 Authors
+name: SCAN & EXTRACT - 23 Other Sunni
 
 on:
   workflow_dispatch:
@@ -6,7 +6,7 @@ on:
 jobs:
   extract-all:
     runs-on: ubuntu-latest
-    timeout-minutes: 480
+    timeout-minutes: 360
     
     steps:
       - name: Setup Python & Deps
@@ -17,66 +17,38 @@ jobs:
       - name: Install PyYAML
         run: pip install pyyaml
       
-      - name: DEEP SCAN & EXTRACT ALL 38
+      - name: SCAN & EXTRACT ALL 23
         shell: python
         run: |
           import os, json, subprocess, re
           
           AUTHORS = [
-              # ۹ گمشده قبلی
-              {"name": "ظهیرالدین_بخاری", "patterns": ["ZahirDinBukhari", "ظهیر_بخاری", "ZahirBukhari", "فتاوی_ظهیریه", "Zahiriyya", "ظهیریه", "ZahirDinMuhammadBukhari", "فتاوی", "Fatawa"], "title_ar": "ظهير الدين البخاري"},
-              {"name": "والوالجی", "patterns": ["Walwaliji", "والوالجي", "Walwalij", "فتاوی_والوالجیه", "Walwalijiyya", "ZahirDinWalwaliji"], "title_ar": "عبد الرشيد الوالوالجي"},
-              {"name": "خوارزمی_ادیب", "patterns": ["Khawarizmi", "خوارزمي", "Khwarizmi", "MafatihCulum", "مفاتیح_علوم", "AbuBakrKhawarizmi", "ابوبکر_خوارزمي"], "title_ar": "أبو بكر الخوارزمي الأديب"},
-              {"name": "جلال_محلی", "patterns": ["JalalMahalli", "محلي", "Mahalli", "TafsirJalalayn", "کنز_راغبین", "KanzRaghibin", "JalalDinMahalli"], "title_ar": "جلال الدين المحلي"},
-              {"name": "بجیرمی", "patterns": ["Bujayrami", "بجیرمي", "Bujayrimi", "HashiyaBujayrami", "حاشیه_بجیرمي", "SulaymanBujayrami"], "title_ar": "سليمان البجيرمي"},
-              {"name": "ابن_قاسم_مالکی", "patterns": ["IbnQasim", "ابن_قاسم", "CabdRahmanQasim", "Mudawwana", "مدونه", "QasimMisri", "IbnQasimMaliki"], "title_ar": "عبد الرحمن بن القاسم المالكي"},
-              {"name": "زرقانی", "patterns": ["Zarqani", "زرقاني", "SharhMuwatta", "شرح_موطأ", "MuhammadZarqani", "ZarqaniMaliki"], "title_ar": "محمد الزرقاني المالكي"},
-              {"name": "بربهاری", "patterns": ["Barbahari", "بربهاري", "SharhSunna", "شرح_سنه", "BarbahariHanbali", "AbuMuhammadBarbahari"], "title_ar": "أبو محمد البربهاري"},
-              {"name": "شمس_قدامه", "patterns": ["ShamsDinIbnQudama", "شمس_قدامه", "SharhKabir", "شرح_کبیر", "CabdRahmanIbnQudama", "شمس_الدین_قدامه"], "title_ar": "شمس الدين ابن قدامة"},
-              
-              # ۹ حدیث و رجال
-              {"name": "یاقوت_حموی", "patterns": ["YaqutHamawi", "یاقوت_حموي", "MucjamBuldan", "معجم_بلدان", "MucjamUdaba", "معجم_ادبا"], "title_ar": "ياقوت الحموي"},
-              {"name": "ابن_خلکان", "patterns": ["IbnKhallikan", "خلکان", "WafayatAcyan", "وفیات_اعیان", "IbnKhallikan"], "title_ar": "ابن خلكان"},
-              {"name": "ابن_جوزی", "patterns": ["IbnJawzi", "جوزي", "Muntazam", "منتظم", "TalbisIblis", "تلبيس_ابليس", "IbnJawziHanbali"], "title_ar": "ابن الجوزي"},
-              {"name": "ابن_اثیر", "patterns": ["IbnAthir", "اثیر", "KamilFiTarikh", "کامل_تاریخ", "UsdGhaba", "اسد_غابه", "NihayaFiGharib"], "title_ar": "ابن الأثير"},
-              {"name": "ذهبی", "patterns": ["Dhahabi", "ذهبي", "SiyarAclam", "سیر_اعلام", "TarikhIslam", "تاریخ_اسلام", "MizanIctidal"], "title_ar": "شمس الدين الذهبي"},
-              {"name": "ابن_صلاح", "patterns": ["IbnSalah", "صلاح", "CulumHadith", "علوم_حدیث", "MuqaddimaIbnSalah", "مقدمه_صلاح", "IbnSalahShahrazuri"], "title_ar": "ابن الصلاح"},
-              {"name": "خطیب_بغدادی", "patterns": ["KhatibBaghdadi", "خطیب_بغدادي", "TarikhBaghdad", "تاریخ_بغداد", "Kifaya", "کفایه"], "title_ar": "الخطيب البغدادي"},
-              {"name": "ابن_حجر", "patterns": ["IbnHajar", "حجر", "FathBari", "فتح_باري", "Isaba", "اصابه", "TahdhibTahdhib"], "title_ar": "ابن حجر العسقلاني"},
-              {"name": "ابن_عبدالبر", "patterns": ["IbnCabdBarr", "عبدالبر", "IstiCab", "استیعاب", "Tamhid", "تمهید", "JamicBayan"], "title_ar": "ابن عبد البر"},
-              
-              # ۷ فلسفه و کلام
-              {"name": "فارابی", "patterns": ["Farabi", "فارابي", "AraAhlMadina", "مدینه_فاضله", "IhsaUlum", "احصاء_علوم", "FarabiTurk"], "title_ar": "أبو نصر الفارابي"},
-              {"name": "ابن_سینا", "patterns": ["IbnSina", "سینا", "Avicenna", "Shifa", "شفا", "Isharat", "اشارات", "QanunFiTibb"], "title_ar": "ابن سينا"},
-              {"name": "ابن_رشد_حفید", "patterns": ["IbnRushdHafid", "رشد_حفید", "BidayatMujtahid", "بدایه_مجتهد", "TahafutTahafut", "تهافت_تهافت"], "title_ar": "ابن رشد الحفيد"},
-              {"name": "جوینی", "patterns": ["Juwayni", "جویني", "BurhanFiUsul", "برهان_اصول", "IrshadFiKalam", "ارشاد_کلام", "ImamHaramayn"], "title_ar": "إمام الحرمين الجويني"},
-              {"name": "فخر_رازی", "patterns": ["FakhrDinRazi", "فخر_رازي", "MafatihGhayb", "مفاتیح_غیب", "MabahithMashriqiyya", "محصل", "Muhassal"], "title_ar": "فخر الدين الرازي"},
-              {"name": "غزالی", "patterns": ["Ghazali", "غزالي", "IhyaUlum", "احیاء_علوم", "TahafutFalasifa", "تهافت_فلاسفه", "Mustasfa"], "title_ar": "أبو حامد الغزالي"},
-              {"name": "ابن_حزم", "patterns": ["IbnHazm", "حزم", "FisalFiMilal", "فصل_ملل", "Muhalla", "محلی", "IbnHazmZahiri"], "title_ar": "ابن حزم الظاهري"},
-              
-              # ۳ عرفان و تصوف
-              {"name": "ابن_عربی", "patterns": ["IbnCarabi", "عربي", "FususHikam", "فصوص_حکم", "FutuhatMakkiyya", "فتوحات_مکیه", "ShaykhAkbar"], "title_ar": "محيي الدين ابن عربي"},
-              {"name": "مولانا_رومی", "patterns": ["JalalDinRumi", "رومي", "Mathnawi", "مثنوي", "FihiMaFihi", "فیه_ما_فیه", "MawlanaRumi"], "title_ar": "جلال الدين الرومي"},
-              {"name": "عبدالقادر_گیلانی", "patterns": ["CabdQadirJilani", "گیلاني", "Jilani", "Ghunya", "غنیه", "FutuhGhayb", "فتوح_غیب"], "title_ar": "عبد القادر الجيلاني"},
-              
-              # ۵ ادبیات و لغت
-              {"name": "جاحظ", "patterns": ["Jahiz", "جاحظ", "BayanTabyin", "بیان_تبیین", "Bukhala", "بخلاء", "Hayawan", "حیوان"], "title_ar": "الجاحظ"},
-              {"name": "ابن_مقفع", "patterns": ["IbnMuqaffac", "مقفع", "KalilaWaDimna", "کلیله_دمنه", "AdabKabir", "ادب_کبیر"], "title_ar": "ابن المقفع"},
-              {"name": "خلیل_فراهیدی", "patterns": ["KhalilFarahidi", "خلیل_فراهیدي", "Cayn", "عین", "KitabCayn", "AynLugha", "Farahidi"], "title_ar": "الخليل بن أحمد الفراهيدي"},
-              {"name": "ابن_جنی", "patterns": ["IbnJinni", "جني", "Khasais", "خصائص", "SirrSinaca", "سر_صناعه", "IbnJinniNahwi"], "title_ar": "ابن جني النحوي"},
-              {"name": "ابن_منظور", "patterns": ["IbnManzur", "منظور", "LisanCarab", "لسان_عرب", "IbnManzurMisri"], "title_ar": "ابن منظور"},
-              
-              # ۲ علوم اجتماعی
-              {"name": "ابن_خلدون", "patterns": ["IbnKhaldun", "خلدون", "Muqaddima", "مقدمه", "Cibar", "عبر", "IbnKhaldun"], "title_ar": "ابن خلدون"},
-              {"name": "ماوردی", "patterns": ["Mawardi", "ماوردي", "AhkamSultaniyya", "احکام_سلطانیه", "AdabDunyaWaDin", "ادب_دنیا_دین"], "title_ar": "الماوردي"},
-              
-              # ۳ علوم طبیعی
-              {"name": "ابن_هیثم", "patterns": ["IbnHaytham", "هیثم", "Manazir", "مناظر", "IbnHaythamBasri", "Haytham"], "title_ar": "ابن الهيثم"},
-              {"name": "جابر_بن_حیان", "patterns": ["JabirIbnHayyan", "جابر_حیان", "Sumum", "سموم", "JabirHayyan", "IbnHayyan"], "title_ar": "جابر بن حيان"},
-              {"name": "خوارزمی_ریاضی", "patterns": ["MuhammadIbnMusa", "خوارزمي_ریاضي", "KhwarizmiMath", "JabrMuqabala", "جبر_مقابله", "KhwarizmiAlgebra"], "title_ar": "محمد بن موسى الخوارزمي"},
+              {"name": "طبری", "patterns": ["Tabari", "طبري", "JamicBayan", "جامع_بیان", "TarikhTabari", "تاریخ_طبري"], "title_ar": "محمد بن جرير الطبري"},
+              {"name": "ابن_ابی_حاتم", "patterns": ["IbnAbiHatim", "ابن_ابي_حاتم", "JarhTacdil", "جرح_تعدیل", "TafsirIbnAbiHatim"], "title_ar": "ابن أبي حاتم الرازي"},
+              {"name": "ابن_حبان", "patterns": ["IbnHibban", "حبان", "SahihIbnHibban", "صحیح_حبان", "Thiqat", "ثقات"], "title_ar": "ابن حبان البستي"},
+              {"name": "حاکم_نیشابوری", "patterns": ["HakimNaysaburi", "حاکم_نیشابوري", "Mustadrak", "مستدرك", "HakimNishapuri"], "title_ar": "الحاكم النيسابوري"},
+              {"name": "ابن_عبدالبر", "patterns": ["IbnCabdBarr", "عبدالبر", "IstiCab", "استیعاب", "Tamhid", "تمهید"], "title_ar": "ابن عبد البر"},
+              {"name": "خطیب_بغدادی", "patterns": ["KhatibBaghdadi", "خطیب_بغدادي", "TarikhBaghdad", "تاریخ_بغداد", "Kifaya"], "title_ar": "الخطيب البغدادي"},
+              {"name": "بغوی", "patterns": ["Baghawi", "بغوي", "SharhSunna", "شرح_سنه", "Masabih", "مصابیح", "TafsirBaghawi"], "title_ar": "الحسين بن مسعود البغوي"},
+              {"name": "ابن_عساکر", "patterns": ["IbnCasakir", "عساكر", "TarikhDimashq", "تاریخ_دمشق", "IbnAsakir"], "title_ar": "ابن عساكر الدمشقي"},
+              {"name": "ابن_اثیر", "patterns": ["IbnAthir", "اثیر", "KamilFiTarikh", "کامل_تاریخ", "UsdGhaba", "اسد_غابه", "NihayaFiGharib"], "title_ar": "ابن الأثير الجزري"},
+              {"name": "ابن_صلاح", "patterns": ["IbnSalah", "صلاح", "CulumHadith", "علوم_حدیث", "MuqaddimaIbnSalah"], "title_ar": "ابن الصلاح"},
+              {"name": "منذری", "patterns": ["Mundhiri", "منذري", "TarghibTarhib", "ترغیب_ترهیب", "MukhtasarMuslim"], "title_ar": "عبد العظيم المنذري"},
+              {"name": "ذهبی", "patterns": ["Dhahabi", "ذهبي", "SiyarAclam", "سیر_اعلام", "TarikhIslam", "میزان_اعتدال"], "title_ar": "شمس الدين الذهبي"},
+              {"name": "ابن_کثیر", "patterns": ["IbnKathir", "کثیر", "Bidaya", "بدایه", "TafsirIbnKathir"], "title_ar": "ابن كثير الدمشقي"},
+              {"name": "ابن_حجر", "patterns": ["IbnHajar", "حجر", "FathBari", "فتح_باري", "Tahdhib", "Isaba", "اصابه"], "title_ar": "ابن حجر العسقلاني"},
+              {"name": "سیوطی", "patterns": ["Suyuti", "سیوطي", "Itqan", "اتقان", "DurrManthur", "در_منثور", "JamicSaghir"], "title_ar": "جلال الدين السيوطي"},
+              {"name": "سخاوی", "patterns": ["Sakhawi", "سخاوي", "DawLamic", "ضو_لامع", "FathMughith"], "title_ar": "شمس الدين السخاوي"},
+              {"name": "شوکانی", "patterns": ["Shawkani", "شوكاني", "NaylAwtar", "نیل_اوطار", "FathQadir", "فتح_قدیر"], "title_ar": "محمد بن علي الشوكاني"},
+              {"name": "خطیب_تبریزی", "patterns": ["KhatibTabrizi", "تبریزي", "MishkatMasabih", "مشکاه_مصابیح", "Ikmac"], "title_ar": "الخطيب التبريزي"},
+              {"name": "جوهری", "patterns": ["Jawhari", "جوهري", "Sihah", "صحاح", "TajLugha"], "title_ar": "إسماعيل الجوهري"},
+              {"name": "ابن_قتیبه", "patterns": ["IbnQutayba", "قتیبه", "CuyunAkhbar", "عیون_اخبار", "Macarif", "معارف", "Shicr"], "title_ar": "ابن قتيبة الدينوري"},
+              {"name": "زمخشری", "patterns": ["Zamakhshari", "زمخشري", "Kashshaf", "کشاف", "Mufassal", "مفصل", "AsasBalagha"], "title_ar": "محمود الزمخشري"},
+              {"name": "صغانی", "patterns": ["Saghani", "صغاني", "MashariqAnwar", "مشارق_انوار", "Cubab", "عباب"], "title_ar": "الحسن الصغاني"},
+              {"name": "جرجانی", "patterns": ["Jurjani", "جرجاني", "Tacrifat", "تعریفات", "SharifJurjani", "شریف_جرجاني"], "title_ar": "علي بن محمد الجرجاني"},
           ]
           
-          REPOS = [f"{c:04d}AH" for c in range(0, 1500, 25)]
+          REPOS = [f"{c:04d}AH" for c in range(200, 1400, 25)]
           cloned_repos = {}
           FINAL_DIR = "final_package"
           os.makedirs(FINAL_DIR, exist_ok=True)
@@ -105,8 +77,8 @@ jobs:
                   prev_empty = is_empty
               return '\n'.join(result).strip()
           
-          # اسکن
-          print("🔍 مرحله ۱: اسکن عمیق...")
+          # مرحله ۱: اسکن
+          print("🔍 مرحله ۱: اسکن...")
           author_folders = {a["name"]: [] for a in AUTHORS}
           
           for repo_name in REPOS:
@@ -144,36 +116,29 @@ jobs:
                   print(".", end="")
                   subprocess.run(["rm", "-rf", repo_dir], check=False)
           
-          # گزارش اسکن
-          print(f"\n\n{'='*70}")
-          print("📊 گزارش اسکن:")
-          print(f"{'='*70}")
-          
-          FOUND_AUTHORS = []
-          MISSING_AUTHORS = []
-          
+          # انتخاب بهترین پوشه
+          FINAL_AUTHORS = []
           for author in AUTHORS:
               items = author_folders[author["name"]]
               best = max(items, key=lambda x: x['size_mb']) if items else None
-              if best and best['size_mb'] > 0.3:
+              if best and best['size_mb'] > 0.5:
+                  FINAL_AUTHORS.append({"name": author['name'], "folder": best['folder'], "repo": best['repo'], "title_ar": author['title_ar']})
                   print(f"   ✅ {author['name']}: {best['folder']} ({best['size_mb']} MB)")
-                  FOUND_AUTHORS.append({"name": author['name'], "folder": best['folder'], "repo": best['repo'], "title_ar": author['title_ar']})
               else:
                   print(f"   ❌ {author['name']}: پیدا نشد")
-                  MISSING_AUTHORS.append(author['title_ar'])
           
-          # استخراج
-          print(f"\n📚 مرحله ۲: استخراج {len(FOUND_AUTHORS)} نویسنده...")
+          # مرحله ۲: استخراج
+          print(f"\n📚 مرحله ۲: استخراج {len(FINAL_AUTHORS)} نویسنده...")
           ALL_SUMMARY = []
           
-          for idx, author in enumerate(FOUND_AUTHORS, 1):
+          for idx, author in enumerate(FINAL_AUTHORS, 1):
               author_name = author['name']
               folder_name = author['folder']
               repo_name = author['repo']
               title_ar = author['title_ar']
               
               print(f"\n{'#'*70}")
-              print(f"📚 [{idx}/{len(FOUND_AUTHORS)}] {title_ar}")
+              print(f"📚 [{idx}/{len(FINAL_AUTHORS)}] {title_ar}")
               
               author_dir = os.path.join(FINAL_DIR, author_name)
               os.makedirs(author_dir, exist_ok=True)
@@ -228,24 +193,15 @@ jobs:
                   json.dump({"author": title_ar, "total_books": len(books_extracted), "books": books_extracted}, f, ensure_ascii=False, indent=2)
               ALL_SUMMARY.append({"author": title_ar, "total_books": len(books_extracted)})
           
-          # گزارش نهایی
           with open(os.path.join(FINAL_DIR, "00_INDEX.json"), 'w', encoding='utf-8') as f:
-              json.dump({"total_authors": len(ALL_SUMMARY), "authors": ALL_SUMMARY, "missing": MISSING_AUTHORS}, f, ensure_ascii=False, indent=2)
+              json.dump({"total_authors": len(ALL_SUMMARY), "authors": ALL_SUMMARY}, f, ensure_ascii=False, indent=2)
           
-          print(f"\n{'='*70}")
-          print(f"🎉 گزارش نهایی:")
-          print(f"{'='*70}")
-          print(f"✅ استخراج شده: {len(ALL_SUMMARY)} نویسنده")
-          print(f"❌ پیدا نشده: {len(MISSING_AUTHORS)} نویسنده")
-          if MISSING_AUTHORS:
-              print(f"\n📋 گمشده‌ها:")
-              for m in MISSING_AUTHORS:
-                  print(f"   • {m}")
+          print(f"\n🎉 تمام! {len(ALL_SUMMARY)} نویسنده پردازش شد")
       
       - name: Upload Final Package
         uses: actions/upload-artifact@v4
         with:
-          name: FINAL-38-AUTHORS
+          name: ALL-23-OTHER-SUNNI-FINAL
           path: final_package/
           retention-days: 7
           compression-level: 6
