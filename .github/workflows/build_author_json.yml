@@ -1,207 +1,136 @@
-name: SCAN & EXTRACT - 23 Other Sunni
+name: DOWNLOAD - 21 Missing from Archive.org
 
 on:
   workflow_dispatch:
 
 jobs:
-  extract-all:
+  download:
     runs-on: ubuntu-latest
-    timeout-minutes: 360
+    timeout-minutes: 180
     
     steps:
-      - name: Setup Python & Deps
+      - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
       
-      - name: Install PyYAML
-        run: pip install pyyaml
+      - name: Install Requests
+        run: pip install requests
       
-      - name: SCAN & EXTRACT ALL 23
+      - name: Download from Archive.org
         shell: python
         run: |
-          import os, json, subprocess, re
+          import os, json, requests, time
           
-          AUTHORS = [
-              {"name": "طبری", "patterns": ["Tabari", "طبري", "JamicBayan", "جامع_بیان", "TarikhTabari", "تاریخ_طبري"], "title_ar": "محمد بن جرير الطبري"},
-              {"name": "ابن_ابی_حاتم", "patterns": ["IbnAbiHatim", "ابن_ابي_حاتم", "JarhTacdil", "جرح_تعدیل", "TafsirIbnAbiHatim"], "title_ar": "ابن أبي حاتم الرازي"},
-              {"name": "ابن_حبان", "patterns": ["IbnHibban", "حبان", "SahihIbnHibban", "صحیح_حبان", "Thiqat", "ثقات"], "title_ar": "ابن حبان البستي"},
-              {"name": "حاکم_نیشابوری", "patterns": ["HakimNaysaburi", "حاکم_نیشابوري", "Mustadrak", "مستدرك", "HakimNishapuri"], "title_ar": "الحاكم النيسابوري"},
-              {"name": "ابن_عبدالبر", "patterns": ["IbnCabdBarr", "عبدالبر", "IstiCab", "استیعاب", "Tamhid", "تمهید"], "title_ar": "ابن عبد البر"},
-              {"name": "خطیب_بغدادی", "patterns": ["KhatibBaghdadi", "خطیب_بغدادي", "TarikhBaghdad", "تاریخ_بغداد", "Kifaya"], "title_ar": "الخطيب البغدادي"},
-              {"name": "بغوی", "patterns": ["Baghawi", "بغوي", "SharhSunna", "شرح_سنه", "Masabih", "مصابیح", "TafsirBaghawi"], "title_ar": "الحسين بن مسعود البغوي"},
-              {"name": "ابن_عساکر", "patterns": ["IbnCasakir", "عساكر", "TarikhDimashq", "تاریخ_دمشق", "IbnAsakir"], "title_ar": "ابن عساكر الدمشقي"},
-              {"name": "ابن_اثیر", "patterns": ["IbnAthir", "اثیر", "KamilFiTarikh", "کامل_تاریخ", "UsdGhaba", "اسد_غابه", "NihayaFiGharib"], "title_ar": "ابن الأثير الجزري"},
-              {"name": "ابن_صلاح", "patterns": ["IbnSalah", "صلاح", "CulumHadith", "علوم_حدیث", "MuqaddimaIbnSalah"], "title_ar": "ابن الصلاح"},
-              {"name": "منذری", "patterns": ["Mundhiri", "منذري", "TarghibTarhib", "ترغیب_ترهیب", "MukhtasarMuslim"], "title_ar": "عبد العظيم المنذري"},
-              {"name": "ذهبی", "patterns": ["Dhahabi", "ذهبي", "SiyarAclam", "سیر_اعلام", "TarikhIslam", "میزان_اعتدال"], "title_ar": "شمس الدين الذهبي"},
-              {"name": "ابن_کثیر", "patterns": ["IbnKathir", "کثیر", "Bidaya", "بدایه", "TafsirIbnKathir"], "title_ar": "ابن كثير الدمشقي"},
-              {"name": "ابن_حجر", "patterns": ["IbnHajar", "حجر", "FathBari", "فتح_باري", "Tahdhib", "Isaba", "اصابه"], "title_ar": "ابن حجر العسقلاني"},
-              {"name": "سیوطی", "patterns": ["Suyuti", "سیوطي", "Itqan", "اتقان", "DurrManthur", "در_منثور", "JamicSaghir"], "title_ar": "جلال الدين السيوطي"},
-              {"name": "سخاوی", "patterns": ["Sakhawi", "سخاوي", "DawLamic", "ضو_لامع", "FathMughith"], "title_ar": "شمس الدين السخاوي"},
-              {"name": "شوکانی", "patterns": ["Shawkani", "شوكاني", "NaylAwtar", "نیل_اوطار", "FathQadir", "فتح_قدیر"], "title_ar": "محمد بن علي الشوكاني"},
-              {"name": "خطیب_تبریزی", "patterns": ["KhatibTabrizi", "تبریزي", "MishkatMasabih", "مشکاه_مصابیح", "Ikmac"], "title_ar": "الخطيب التبريزي"},
-              {"name": "جوهری", "patterns": ["Jawhari", "جوهري", "Sihah", "صحاح", "TajLugha"], "title_ar": "إسماعيل الجوهري"},
-              {"name": "ابن_قتیبه", "patterns": ["IbnQutayba", "قتیبه", "CuyunAkhbar", "عیون_اخبار", "Macarif", "معارف", "Shicr"], "title_ar": "ابن قتيبة الدينوري"},
-              {"name": "زمخشری", "patterns": ["Zamakhshari", "زمخشري", "Kashshaf", "کشاف", "Mufassal", "مفصل", "AsasBalagha"], "title_ar": "محمود الزمخشري"},
-              {"name": "صغانی", "patterns": ["Saghani", "صغاني", "MashariqAnwar", "مشارق_انوار", "Cubab", "عباب"], "title_ar": "الحسن الصغاني"},
-              {"name": "جرجانی", "patterns": ["Jurjani", "جرجاني", "Tacrifat", "تعریفات", "SharifJurjani", "شریف_جرجاني"], "title_ar": "علي بن محمد الجرجاني"},
+          BOOKS = [
+              # شیعه (۱۲ نفر)
+              {"name": "جابر_جعفی", "identifier": "umm-al-kitab_compress", "title": "ام الکتاب - جابر بن یزید الجعفي"},
+              {"name": "فضل_شاذان", "identifier": "al-idah", "title": "الإيضاح - فضل بن شاذان"},
+              {"name": "قطب_راوندی", "identifier": "AAskZad-1289505", "title": "قصص الأنبياء - قطب الدين الراوندي"},
+              {"name": "سید_محمد_مجاهد", "identifier": "", "title": "", "skip": True},
+              {"name": "مامقانی", "identifier": "abd-albaqir-253", "title": "مقباس الهداية - عبد الله المامقاني"},
+              {"name": "شوشتری", "identifier": "qamus-alrejal", "title": "قاموس الرجال - محمد تقي التستري"},
+              {"name": "بهجة", "identifier": "al-rahma-al-wasica", "title": "الرحمة الواسعة - محمد تقي بهجت"},
+              {"name": "حسن_سلیمان_حلی", "identifier": "abd-albaqir-119", "title": "المحتضر - الحسن بن سليمان الحلي"},
+              {"name": "رضی_الدین_طاووس", "identifier": "20240403_20240403_1946", "title": "اليقين - رضي الدين علي بن طاووس"},
+              {"name": "یحیی_سعید_حلی", "identifier": "al-mustadrak-al-mukhtar", "title": "المستدرك المختار - يحيى بن سعيد الحلي"},
+              {"name": "خامنه_ای", "identifier": "tfserbraah", "title": "تفسير براءة - علي الخامنئي"},
+              {"name": "ملا_خسرو", "identifier": "durrar-al-hukkam", "title": "درر الحكام - ملا خسرو"},
+              
+              # اهل سنت و علوم (۹ نفر)
+              {"name": "ظهیرالدین_بخاری", "identifier": "al-fatawa-al-zahiriyya", "title": "الفتاوى الظهيرية - ظهير الدين البخاري"},
+              {"name": "والوالجی", "identifier": "al-fatawa-al-walwalijiyya", "title": "الفتاوى الوالوالجية"},
+              {"name": "زرقانی", "identifier": "sharh-al-zarqani", "title": "شرح الزرقاني علي الموطأ"},
+              {"name": "بربهاری", "identifier": "sharh-al-sunnah", "title": "شرح السنة - البربهاري"},
+              {"name": "خوارزمی_ریاضی", "identifier": "al-jabr-wa-al-muqabala", "title": "الجبر والمقابلة - الخوارزمي"},
+              {"name": "مولانا_رومی", "identifier": "masnavi-manavi", "title": "مثنوي معنوي - جلال الدين الرومي"},
+              {"name": "ابن_قاسم_مالکی", "identifier": "al-mudawwana", "title": "المدونة الكبری - رواية ابن القاسم"},
+              {"name": "جلال_محلی", "identifier": "tafsir-al-jalalayn", "title": "تفسير الجلالين", "already_have": True},
+              {"name": "شمس_قدامه", "identifier": "al-sharh-al-kabir", "title": "الشرح الكبير - شمس الدين ابن قدامة", "already_have": True},
           ]
           
-          REPOS = [f"{c:04d}AH" for c in range(200, 1400, 25)]
-          cloned_repos = {}
-          FINAL_DIR = "final_package"
-          os.makedirs(FINAL_DIR, exist_ok=True)
+          OUTPUT_DIR = "archive_downloads"
+          os.makedirs(OUTPUT_DIR, exist_ok=True)
           
-          def clean_text(raw_text):
-              lines = raw_text.split('\n')
-              clean_lines = []
-              for line in lines:
-                  if re.match(r'^#META#', line.strip()): continue
-                  if line.strip() == '#META#Header#End#': continue
-                  if re.match(r'^PageV', line.strip()): continue
-                  if re.match(r'^ms\d+$', line.strip()): continue
-                  if '~~' in line: line = line.replace('~~', '')
-                  if line.startswith('### |') or line.startswith('### ||'): continue
-                  if line.startswith('# '): line = line[2:]
-                  elif line.startswith('## '): line = line[3:]
-                  elif line.startswith('### '): line = line[4:]
-                  clean_lines.append(line)
-              
-              result = []
-              prev_empty = False
-              for line in clean_lines:
-                  is_empty = not line.strip()
-                  if is_empty and prev_empty: continue
-                  result.append(line)
-                  prev_empty = is_empty
-              return '\n'.join(result).strip()
+          results = {"downloaded": [], "failed": [], "skipped": []}
           
-          # مرحله ۱: اسکن
-          print("🔍 مرحله ۱: اسکن...")
-          author_folders = {a["name"]: [] for a in AUTHORS}
-          
-          for repo_name in REPOS:
-              repo_dir = f"repo_{repo_name}"
-              print(f"📦 {repo_name}...", end=" ")
+          for book in BOOKS:
+              name = book['name']
               
-              if not os.path.exists(repo_dir):
-                  result = subprocess.run(["git", "clone", "--depth", "1", f"https://github.com/OpenITI/{repo_name}.git", repo_dir], capture_output=True, text=True)
-                  if result.returncode != 0:
-                      print("❌")
-                      continue
-              
-              data_dir = os.path.join(repo_dir, "data")
-              if not os.path.exists(data_dir):
-                  print("∅")
+              if book.get('skip'):
+                  print(f"\n⏭️ {name}: رد شد (در archive.org نیست)")
+                  results['skipped'].append(name)
                   continue
               
-              folders = [f for f in os.listdir(data_dir) if os.path.isdir(os.path.join(data_dir, f))]
-              found_any = False
+              if book.get('already_have'):
+                  print(f"\n✅ {name}: قبلاً استخراج شده")
+                  results['downloaded'].append({"name": name, "status": "already_have"})
+                  continue
               
-              for author in AUTHORS:
-                  for folder in folders:
-                      folder_lower = folder.lower()
-                      for pat in author["patterns"]:
-                          if pat.lower() in folder_lower:
-                              folder_path = os.path.join(data_dir, folder)
-                              total_size = sum(os.path.getsize(os.path.join(r,f)) for r,_,fs in os.walk(folder_path) for f in fs)
-                              if folder not in [f["folder"] for f in author_folders[author["name"]]]:
-                                  author_folders[author["name"]].append({"repo": repo_name, "folder": folder, "size_mb": round(total_size/(1024*1024),2)})
-                                  found_any = True
-                                  print(f"\n      🎯 {author['name']}: {folder} ({round(total_size/(1024*1024),1)} MB)")
-                              break
+              identifier = book['identifier']
+              title = book['title']
               
-              if not found_any:
-                  print(".", end="")
-                  subprocess.run(["rm", "-rf", repo_dir], check=False)
+              print(f"\n{'='*60}")
+              print(f"📥 {name}: {title}")
+              print(f"   شناسه: {identifier}")
+              
+              if not identifier:
+                  print(f"   ❌ شناسه نامشخص")
+                  results['failed'].append({"name": name, "reason": "no_identifier"})
+                  continue
+              
+              try:
+                  # دانلود PDF از archive.org
+                  pdf_url = f"https://archive.org/download/{identifier}/{identifier}.pdf"
+                  print(f"   🌐 {pdf_url}")
+                  
+                  headers = {
+                      'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36'
+                  }
+                  
+                  response = requests.get(pdf_url, headers=headers, timeout=120, stream=True)
+                  
+                  if response.status_code == 200 and len(response.content) > 50000:
+                      safe_name = name.replace(" ", "_")
+                      filepath = os.path.join(OUTPUT_DIR, f"{safe_name}.pdf")
+                      
+                      with open(filepath, 'wb') as f:
+                          for chunk in response.iter_content(chunk_size=8192):
+                              f.write(chunk)
+                      
+                      file_size = os.path.getsize(filepath)
+                      print(f"   ✅ دانلود شد: {file_size:,} bytes ({file_size/(1024*1024):.1f} MB)")
+                      results['downloaded'].append({"name": name, "file": filepath, "size_mb": round(file_size/(1024*1024), 1)})
+                  else:
+                      print(f"   ❌ خطای HTTP: {response.status_code}")
+                      results['failed'].append({"name": name, "reason": f"HTTP_{response.status_code}"})
+              
+              except Exception as e:
+                  print(f"   ❌ خطا: {str(e)[:100]}")
+                  results['failed'].append({"name": name, "reason": str(e)[:100]})
+              
+              time.sleep(3)
           
-          # انتخاب بهترین پوشه
-          FINAL_AUTHORS = []
-          for author in AUTHORS:
-              items = author_folders[author["name"]]
-              best = max(items, key=lambda x: x['size_mb']) if items else None
-              if best and best['size_mb'] > 0.5:
-                  FINAL_AUTHORS.append({"name": author['name'], "folder": best['folder'], "repo": best['repo'], "title_ar": author['title_ar']})
-                  print(f"   ✅ {author['name']}: {best['folder']} ({best['size_mb']} MB)")
-              else:
-                  print(f"   ❌ {author['name']}: پیدا نشد")
+          # ذخیره گزارش
+          with open(os.path.join(OUTPUT_DIR, "download_report.json"), 'w', encoding='utf-8') as f:
+              json.dump(results, f, ensure_ascii=False, indent=2)
           
-          # مرحله ۲: استخراج
-          print(f"\n📚 مرحله ۲: استخراج {len(FINAL_AUTHORS)} نویسنده...")
-          ALL_SUMMARY = []
+          print(f"\n{'='*70}")
+          print(f"📊 گزارش نهایی:")
+          print(f"{'='*70}")
+          print(f"✅ دانلود شده: {len(results['downloaded'])}")
+          print(f"❌ ناموفق: {len(results['failed'])}")
+          print(f"⏭️ رد شده: {len(results['skipped'])}")
           
-          for idx, author in enumerate(FINAL_AUTHORS, 1):
-              author_name = author['name']
-              folder_name = author['folder']
-              repo_name = author['repo']
-              title_ar = author['title_ar']
-              
-              print(f"\n{'#'*70}")
-              print(f"📚 [{idx}/{len(FINAL_AUTHORS)}] {title_ar}")
-              
-              author_dir = os.path.join(FINAL_DIR, author_name)
-              os.makedirs(author_dir, exist_ok=True)
-              
-              if repo_name not in cloned_repos:
-                  repo_dir = f"repo_{repo_name}"
-                  if not os.path.exists(repo_dir):
-                      subprocess.run(["git", "clone", "--depth", "1", f"https://github.com/OpenITI/{repo_name}.git", repo_dir], check=True, capture_output=True)
-                  cloned_repos[repo_name] = repo_dir
-              
-              folder_path = os.path.join(cloned_repos[repo_name], "data", folder_name)
-              books_extracted = []
-              
-              for root, dirs, files in os.walk(folder_path):
-                  for file in sorted(files):
-                      file_path = os.path.join(root, file)
-                      try: size = os.path.getsize(file_path)
-                      except: continue
-                      if size < 50000: continue
-                      if file.endswith(('.yml', '.md')): continue
-                      
-                      try:
-                          with open(file_path, 'r', encoding='utf-8') as f:
-                              raw_text = f.read()
-                      except: continue
-                      
-                      meta = {}
-                      for key, pattern in {
-                          'title': r'#META#\s+020\.BookTITLE\s+::\s+(.+)',
-                          'author': r'#META#\s+010\.AuthorNAME\s+::\s+(.+)',
-                      }.items():
-                          m = re.search(pattern, raw_text)
-                          if m and m.group(1).strip() not in ['NODATA', 'NOTGIVEN', '']:
-                              meta[key] = m.group(1).strip()
-                      
-                      title = meta.get('title', file[:60])
-                      clean = clean_text(raw_text)
-                      
-                      safe_name = re.sub(r'[^\w\-_]', '_', title)[:60]
-                      txt_path = os.path.join(author_dir, f"{safe_name}.txt")
-                      
-                      with open(txt_path, 'w', encoding='utf-8') as f:
-                          f.write(f"العنوان: {title}\n")
-                          if 'author' in meta: f.write(f"المؤلف: {meta['author']}\n")
-                          f.write("="*70 + "\n\n")
-                          f.write(clean)
-                      
-                      books_extracted.append({"title": title, "size_mb": round(size/(1024*1024),2), "text_length": len(clean)})
-                      print(f"   ✅ {title} ({round(size/(1024*1024),1)} MB)")
-              
-              with open(os.path.join(author_dir, "metadata.json"), 'w', encoding='utf-8') as f:
-                  json.dump({"author": title_ar, "total_books": len(books_extracted), "books": books_extracted}, f, ensure_ascii=False, indent=2)
-              ALL_SUMMARY.append({"author": title_ar, "total_books": len(books_extracted)})
-          
-          with open(os.path.join(FINAL_DIR, "00_INDEX.json"), 'w', encoding='utf-8') as f:
-              json.dump({"total_authors": len(ALL_SUMMARY), "authors": ALL_SUMMARY}, f, ensure_ascii=False, indent=2)
-          
-          print(f"\n🎉 تمام! {len(ALL_SUMMARY)} نویسنده پردازش شد")
+          if results['failed']:
+              print(f"\n📋 ناموفق‌ها:")
+              for f in results['failed']:
+                  print(f"   • {f['name']}: {f.get('reason', 'N/A')}")
       
-      - name: Upload Final Package
+      - name: Upload Downloads
         uses: actions/upload-artifact@v4
         with:
-          name: ALL-23-OTHER-SUNNI-FINAL
-          path: final_package/
+          name: ARCHIVE-DOWNLOADS
+          path: archive_downloads/
           retention-days: 7
           compression-level: 6
