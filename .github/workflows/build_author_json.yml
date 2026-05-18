@@ -1,12 +1,12 @@
-name: DOWNLOAD - 21 Missing from Archive.org
+name: FINAL DEEP SEARCH - 21 Authors
 
 on:
   workflow_dispatch:
 
 jobs:
-  download:
+  deep-scan:
     runs-on: ubuntu-latest
-    timeout-minutes: 180
+    timeout-minutes: 120
     
     steps:
       - name: Setup Python
@@ -14,123 +14,114 @@ jobs:
         with:
           python-version: '3.11'
       
-      - name: Install Requests
-        run: pip install requests
-      
-      - name: Download from Archive.org
+      - name: ULTRA DEEP SCAN
         shell: python
         run: |
-          import os, json, requests, time
+          import os, json, subprocess
           
-          BOOKS = [
-              # شیعه (۱۲ نفر)
-              {"name": "جابر_جعفی", "identifier": "umm-al-kitab_compress", "title": "ام الکتاب - جابر بن یزید الجعفي"},
-              {"name": "فضل_شاذان", "identifier": "al-idah", "title": "الإيضاح - فضل بن شاذان"},
-              {"name": "قطب_راوندی", "identifier": "AAskZad-1289505", "title": "قصص الأنبياء - قطب الدين الراوندي"},
-              {"name": "سید_محمد_مجاهد", "identifier": "", "title": "", "skip": True},
-              {"name": "مامقانی", "identifier": "abd-albaqir-253", "title": "مقباس الهداية - عبد الله المامقاني"},
-              {"name": "شوشتری", "identifier": "qamus-alrejal", "title": "قاموس الرجال - محمد تقي التستري"},
-              {"name": "بهجة", "identifier": "al-rahma-al-wasica", "title": "الرحمة الواسعة - محمد تقي بهجت"},
-              {"name": "حسن_سلیمان_حلی", "identifier": "abd-albaqir-119", "title": "المحتضر - الحسن بن سليمان الحلي"},
-              {"name": "رضی_الدین_طاووس", "identifier": "20240403_20240403_1946", "title": "اليقين - رضي الدين علي بن طاووس"},
-              {"name": "یحیی_سعید_حلی", "identifier": "al-mustadrak-al-mukhtar", "title": "المستدرك المختار - يحيى بن سعيد الحلي"},
-              {"name": "خامنه_ای", "identifier": "tfserbraah", "title": "تفسير براءة - علي الخامنئي"},
-              {"name": "ملا_خسرو", "identifier": "durrar-al-hukkam", "title": "درر الحكام - ملا خسرو"},
+          AUTHORS = [
+              # ۱۲ شیعه
+              {"name": "جابر_جعفی", "patterns": ["JabirJufi", "JabirYazid", "جعفي", "Juci", "تفسیر_جابر", "TafsirJabir", "جابر_بن_یزید", "JabirIbnYazid", "ابوحمزه", "AbuHamza", "Thumali", "ثمالي", "رساله_جابر"]},
+              {"name": "فضل_شاذان", "patterns": ["FadlShadhan", "فضل_شاذان", "ایضاح", "Idah", "Iydah", "نیشابوری_فضل", "FadlNaysaburi", "علل_شاذان", "CilalShadhan", "ابن_شاذان", "IbnShadhan"]},
+              {"name": "قطب_راوندی", "patterns": ["QutbRawandi", "راوندي", "Rawandi", "خرائج", "Kharacij", "Kharaij", "قصص_انبیا", "QisasAnbiya", "سعید_راوندی", "SacidRawandi", "منهاج_براعه", "MinhajBaraca"]},
+              {"name": "سید_محمد_مجاهد", "patterns": ["MujahidTabatabai", "مجاهد_طباطبايي", "مناهل", "Manahil", "محمد_مجاهد", "MuhammadMujahid", "کربلایی", "Karbalai", "صاحب_ریاض", "SahibRiyad"]},
+              {"name": "مامقانی", "patterns": ["Mamaqani", "مامقاني", "مقباس", "Miqbas", "تنقیح_مقال", "TanqihMaqal", "عبدالله_مامقاني", "AbdAllahMamaqani", "مرآه_کمال", "MiratKamal"]},
+              {"name": "شوشتری", "patterns": ["Shushtari", "شوشتري", "تستري", "Tustari", "قاموس_رجال", "QamusRijal", "بهج_صباغه", "BahjSabbagha", "محمد_تقی_تستری", "MuhammadTaqiTustari"]},
+              {"name": "بهجة", "patterns": ["Bahjat", "بهجت", "MuhammadTaqiBahjat", "رساله_عملیه", "RisalaCamaliyya", "بهجه", "Bahja", "تقی_بهجت", "TaqiBahjat", "فتاوی_بهجت"]},
+              {"name": "حسن_سلیمان_حلی", "patterns": ["HasanSulayman", "حسن_سلیمان", "مختصر_بصایر", "MukhtasarBasair", "محاسن_حلی", "MahasinHilli", "حسن_حلی", "HasanHilli", "محتضر", "Muhtadar"]},
+              {"name": "رضی_الدین_طاووس", "patterns": ["RadiDinTawus", "رضی_طاووس", "IbnTawusRadi", "لهوف", "Luhuf", "علی_طاووس", "AliTawus", "فرج_مهموم", "FarajMahmum", "یقین", "Yaqin"]},
+              {"name": "یحیی_سعید_حلی", "patterns": ["YahyaSacid", "یحیی_سعید", "جامع_شرایع", "JamicSharaic", "نزهه_ناظر", "NuzhatNazir", "یحیی_حلی", "YahyaHilli", "مستدرک_مختار"]},
+              {"name": "خامنه_ای", "patterns": ["Khaminai", "خامنه_اي", "Khamenei", "خامنه_ای", "علی_خامنه_ای", "AliKhamenei", "سید_علی", "SayyidAliKhaminai"]},
+              {"name": "ملا_خسرو", "patterns": ["MullaKhusru", "ملاخسرو", "Khusru", "خسرو", "درر_حکام", "DurarHukkam", "غرر_احکام", "GhurarAhkam", "ملا_خسرو_حنفی", "MullaKhusruHanafi"]},
               
-              # اهل سنت و علوم (۹ نفر)
-              {"name": "ظهیرالدین_بخاری", "identifier": "al-fatawa-al-zahiriyya", "title": "الفتاوى الظهيرية - ظهير الدين البخاري"},
-              {"name": "والوالجی", "identifier": "al-fatawa-al-walwalijiyya", "title": "الفتاوى الوالوالجية"},
-              {"name": "زرقانی", "identifier": "sharh-al-zarqani", "title": "شرح الزرقاني علي الموطأ"},
-              {"name": "بربهاری", "identifier": "sharh-al-sunnah", "title": "شرح السنة - البربهاري"},
-              {"name": "خوارزمی_ریاضی", "identifier": "al-jabr-wa-al-muqabala", "title": "الجبر والمقابلة - الخوارزمي"},
-              {"name": "مولانا_رومی", "identifier": "masnavi-manavi", "title": "مثنوي معنوي - جلال الدين الرومي"},
-              {"name": "ابن_قاسم_مالکی", "identifier": "al-mudawwana", "title": "المدونة الكبری - رواية ابن القاسم"},
-              {"name": "جلال_محلی", "identifier": "tafsir-al-jalalayn", "title": "تفسير الجلالين", "already_have": True},
-              {"name": "شمس_قدامه", "identifier": "al-sharh-al-kabir", "title": "الشرح الكبير - شمس الدين ابن قدامة", "already_have": True},
+              # ۹ اهل سنت و علوم
+              {"name": "ظهیرالدین_بخاری", "patterns": ["ZahirDinBukhari", "ظهیر_بخاری", "فتاوی_ظهیریه", "Zahiriyya", "ظهیریه", "ZahirDinMuhammad", "فتاوی_بخاری"]},
+              {"name": "والوالجی", "patterns": ["Walwaliji", "والوالجي", "فتاوی_والوالجیه", "Walwalijiyya", "عبدالرشید", "AbdRashid", "والوالج"]},
+              {"name": "زرقانی", "patterns": ["Zarqani", "زرقاني", "شرح_موطأ", "SharhMuwatta", "محمد_زرقانی", "MuhammadZarqani", "زرقانی_مالکی"]},
+              {"name": "بربهاری", "patterns": ["Barbahari", "بربهاري", "شرح_سنه", "SharhSunna", "ابومحمد_بربهاری", "AbuMuhammadBarbahari", "BarbahariHanbali"]},
+              {"name": "خوارزمی_ریاضی", "patterns": ["MuhammadIbnMusa", "خوارزمي", "Khwarizmi", "جبر_مقابله", "JabrMuqabala", "خوارزمی_جبر", "KhwarizmiMath", "موسی_خوارزمی", "MusaKhwarizmi"]},
+              {"name": "مولانا_رومی", "patterns": ["JalalDinRumi", "رومي", "Rumi", "مثنوي", "Mathnawi", "مولانا", "Mawlana", "مولوی", "Mawlawi", "جلال_الدین_رومی"]},
+              {"name": "ابن_قاسم_مالکی", "patterns": ["IbnQasim", "ابن_قاسم", "مدونه", "Mudawwana", "عبدالرحمن_قاسم", "CabdRahmanQasim", "قاسم_مالکی", "QasimMaliki"]},
+              {"name": "جلال_محلی", "patterns": ["JalalMahalli", "محلي", "Mahalli", "کنز_راغبین", "KanzRaghibin", "جلال_الدین_محلی", "JalalDinMahalli"]},
+              {"name": "شمس_قدامه", "patterns": ["ShamsDinIbnQudama", "شمس_قدامه", "شرح_کبیر", "SharhKabir", "عبدالرحمن_قدامه", "CabdRahmanQudama", "شمس_الدین_قدامه"]},
           ]
           
-          OUTPUT_DIR = "archive_downloads"
-          os.makedirs(OUTPUT_DIR, exist_ok=True)
+          REPOS = [f"{c:04d}AH" for c in range(0, 1500, 25)]
           
-          results = {"downloaded": [], "failed": [], "skipped": []}
+          final_results = {a["name"]: [] for a in AUTHORS}
           
-          for book in BOOKS:
-              name = book['name']
+          for repo_name in REPOS:
+              repo_dir = f"repo_{repo_name}"
+              print(f"📦 {repo_name}...", end=" ")
               
-              if book.get('skip'):
-                  print(f"\n⏭️ {name}: رد شد (در archive.org نیست)")
-                  results['skipped'].append(name)
+              if not os.path.exists(repo_dir):
+                  result = subprocess.run(["git", "clone", "--depth", "1", f"https://github.com/OpenITI/{repo_name}.git", repo_dir], capture_output=True, text=True)
+                  if result.returncode != 0:
+                      print("❌")
+                      continue
+              
+              data_dir = os.path.join(repo_dir, "data")
+              if not os.path.exists(data_dir):
+                  print("∅")
                   continue
               
-              if book.get('already_have'):
-                  print(f"\n✅ {name}: قبلاً استخراج شده")
-                  results['downloaded'].append({"name": name, "status": "already_have"})
-                  continue
+              folders = [f for f in os.listdir(data_dir) if os.path.isdir(os.path.join(data_dir, f))]
+              found_any = False
               
-              identifier = book['identifier']
-              title = book['title']
+              for author in AUTHORS:
+                  for folder in folders:
+                      folder_lower = folder.lower()
+                      for pat in author["patterns"]:
+                          if pat.lower() in folder_lower:
+                              folder_path = os.path.join(data_dir, folder)
+                              total_size = sum(os.path.getsize(os.path.join(r,f)) for r,_,fs in os.walk(folder_path) for f in fs)
+                              
+                              # فقط > 100KB
+                              if total_size < 100000:
+                                  continue
+                              
+                              existing = [f["folder"] for f in final_results[author["name"]]]
+                              if folder not in existing:
+                                  final_results[author["name"]].append({"repo": repo_name, "folder": folder, "size_mb": round(total_size/(1024*1024),2)})
+                                  found_any = True
+                                  print(f"\n      🎯 {author['name']}: {folder} ({round(total_size/(1024*1024),1)} MB)")
+                              break
               
-              print(f"\n{'='*60}")
-              print(f"📥 {name}: {title}")
-              print(f"   شناسه: {identifier}")
-              
-              if not identifier:
-                  print(f"   ❌ شناسه نامشخص")
-                  results['failed'].append({"name": name, "reason": "no_identifier"})
-                  continue
-              
-              try:
-                  # دانلود PDF از archive.org
-                  pdf_url = f"https://archive.org/download/{identifier}/{identifier}.pdf"
-                  print(f"   🌐 {pdf_url}")
-                  
-                  headers = {
-                      'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36'
-                  }
-                  
-                  response = requests.get(pdf_url, headers=headers, timeout=120, stream=True)
-                  
-                  if response.status_code == 200 and len(response.content) > 50000:
-                      safe_name = name.replace(" ", "_")
-                      filepath = os.path.join(OUTPUT_DIR, f"{safe_name}.pdf")
-                      
-                      with open(filepath, 'wb') as f:
-                          for chunk in response.iter_content(chunk_size=8192):
-                              f.write(chunk)
-                      
-                      file_size = os.path.getsize(filepath)
-                      print(f"   ✅ دانلود شد: {file_size:,} bytes ({file_size/(1024*1024):.1f} MB)")
-                      results['downloaded'].append({"name": name, "file": filepath, "size_mb": round(file_size/(1024*1024), 1)})
-                  else:
-                      print(f"   ❌ خطای HTTP: {response.status_code}")
-                      results['failed'].append({"name": name, "reason": f"HTTP_{response.status_code}"})
-              
-              except Exception as e:
-                  print(f"   ❌ خطا: {str(e)[:100]}")
-                  results['failed'].append({"name": name, "reason": str(e)[:100]})
-              
-              time.sleep(3)
+              if not found_any:
+                  print(".", end="")
+                  subprocess.run(["rm", "-rf", repo_dir], check=False)
           
-          # ذخیره گزارش
-          with open(os.path.join(OUTPUT_DIR, "download_report.json"), 'w', encoding='utf-8') as f:
-              json.dump(results, f, ensure_ascii=False, indent=2)
-          
-          print(f"\n{'='*70}")
-          print(f"📊 گزارش نهایی:")
+          # گزارش نهایی
+          print(f"\n\n{'='*70}")
+          print("📊 گزارش نهایی Deep Search:")
           print(f"{'='*70}")
-          print(f"✅ دانلود شده: {len(results['downloaded'])}")
-          print(f"❌ ناموفق: {len(results['failed'])}")
-          print(f"⏭️ رد شده: {len(results['skipped'])}")
           
-          if results['failed']:
-              print(f"\n📋 ناموفق‌ها:")
-              for f in results['failed']:
-                  print(f"   • {f['name']}: {f.get('reason', 'N/A')}")
+          found_count = 0
+          missing = []
+          
+          for author in AUTHORS:
+              items = final_results[author["name"]]
+              if items:
+                  best = max(items, key=lambda x: x['size_mb'])
+                  print(f"   ✅ {author['name']}: {best['folder']} ({best['size_mb']} MB)")
+                  found_count += 1
+              else:
+                  print(f"   ❌ {author['name']}: پیدا نشد")
+                  missing.append(author['name'])
+          
+          print(f"\n✅ پیدا شده: {found_count}")
+          print(f"❌ گمشده: {len(missing)}")
+          if missing:
+              print(f"\n📋 گمشده‌های نهایی:")
+              for m in missing:
+                  print(f"   • {m}")
+          
+          with open("final_deep_scan.json", "w", encoding="utf-8") as f:
+              json.dump(final_results, f, ensure_ascii=False, indent=2)
       
-      - name: Upload Downloads
+      - name: Upload Results
         uses: actions/upload-artifact@v4
         with:
-          name: ARCHIVE-DOWNLOADS
-          path: archive_downloads/
+          name: final-deep-scan-results
+          path: final_deep_scan.json
           retention-days: 7
-          compression-level: 6
